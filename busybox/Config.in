@@ -1,0 +1,6 @@
+
+if PACKAGE_busybox
+
+source "busybox/config/Config.in"
+
+endif

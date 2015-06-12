@@ -1,0 +1,20 @@
+
+[ ifup = "$ACTION" ] && {
+	local islan="$(uci -q get network.$INTERFACE.is_lan)"
+	local proto="$(uci -q get network.$INTERFACE.proto)"
+	if [ "$islan" != "1" ] && [ "$proto" != "none" ]; then
+		. /lib/functions/network.sh
+		network_get_ipaddr wan_ip $INTERFACE
+
+		shift_range $wan_ip && {
+			/etc/init.d/network reload
+			/etc/init.d/firewall reload
+			/etc/init.d/dnsmasq restart
+			/etc/init.d/mcpd restart
+			/etc/init.d/dropbear restart
+			/etc/init.d/samba restart
+			/etc/init.d/domain_name_access restart
+		}
+	fi
+}
+

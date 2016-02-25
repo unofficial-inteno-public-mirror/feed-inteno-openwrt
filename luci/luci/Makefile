@@ -2,8 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_BRANCH:=svn-0.11
 PKG_NAME:=luci
-PKG_VERSION:=inteno-1.1.31
-
+PKG_VERSION:=inteno-1.1.35
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=http://public.inteno.se:/luci.git
 PKG_SOURCE_VERSION:=b0ce9e3ad927c92579dc9fc53dc4ce6b8de63bcd

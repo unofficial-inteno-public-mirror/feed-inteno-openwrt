@@ -3,15 +3,10 @@ include $(TOPDIR)/rules.mk
 PKG_BRANCH:=svn-0.11
 PKG_NAME:=luci
 PKG_VERSION:=inteno-1.1.31
-PKG_SOURCE_VERSION:=a1ecfd5a5b59f4ed3377c2f7885dd9c5431bb74a
 
 PKG_SOURCE_PROTO:=git
-ifeq ($(CONFIG_BCM_OPEN),y)
-PKG_SOURCE_URL:=http://ihgsp.inteno.se/git/luci-inteno.git
-else
-PKG_SOURCE_URL:=git@iopsys.inteno.se:luci-inteno-private.git
-endif
-
+PKG_SOURCE_URL:=http://public.inteno.se:/luci.git
+PKG_SOURCE_VERSION:=51b2f990eb8140dc4f20e72581e8471e44ed7bb4
 
 PKG_RELEASE:=$(PKG_SOURCE_VERSION)
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION)-$(PKG_RELEASE).tar.gz

@@ -10,21 +10,38 @@ useradd()
 	local password
 	config_get user $1 user
 	config_get password $1 password
-	grep -rq "^$user:" /etc/passwd || adduser $user -s /bin/false -D -H -h  /mnt/$user
-	/bin/smbpasswd $user $password
+	if ! $(grep -rq "^$user:" /etc/passwd) ; then
+		echo "adding user $user"
+		adduser $user -s /bin/false -D -H -h /mnt/$user -g "samba,pass=$password" && smbpasswd $user $password
+	else
+		if [ $(grep -r "^$user:" /etc/passwd | cut -d':' -f5) != "samba,pass=$password" ] ; then
+			echo "change user $user"
+			deluser $user
+			adduser $user -s /bin/false -D -H -h /mnt/$user -g "samba,pass=$password" && smbpasswd $user $password
+		fi
+	fi
+}
+
+samba_user_exists()
+{
+	local user
+	config_get user $1 user
+	[ "$user" == "$2" ] && echo "1" && break
 }
 
 purgepasswd()
 {
-	for us in `grep mnt /etc/passwd | cut -d":" -f1`; do
-		deluser $us
+	for us in `grep -r "^.*:x:.*:.*:samba.*:" /etc/passwd | cut -d":" -f1`; do
+		[ -z "$(config_foreach samba_user_exists sambausers $us)" ] && smbpasswd -del $us && deluser $us
 	done
 }
 
-purgesmbpasswd()
+purgepasswd_force()
 {
-	rm -rf /etc/samba/smbpasswd
-	touch /etc/samba/smbpasswd
+	for us in `grep ":/mnt/" /etc/passwd | cut -d":" -f1`; do
+		smbpasswd -del $us
+		deluser $us
+	done
 }
 
 smb_header() {
@@ -77,7 +94,7 @@ smb_header() {
 EOT
 	}
 
-	[ -L /etc/samba/smb.conf ] || ln -nsf /var/etc/smb.conf /etc/samba/smb.conf
+	[ -L /etc/samba/smb.conf ] || $(rm -f /etc/samba/smb.conf; ln -nsf /var/etc/smb.conf /etc/samba/smb.conf)
 }
 
 smb_add_share() {
@@ -115,6 +132,7 @@ smb_add_share() {
 
 start_service() {
 	config_load samba
+	purgepasswd
 	config_foreach useradd sambausers
 	config_foreach smb_header samba
 	config_foreach smb_add_share sambashare
@@ -131,8 +149,6 @@ start_service() {
 stop_service() {
 	service_stop /bin/smbd
 	service_stop /bin/nmbd
-	purgepasswd
-	purgesmbpasswd
 }
 
 reload_service() {

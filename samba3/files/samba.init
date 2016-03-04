@@ -14,10 +14,16 @@ useradd()
 		echo "adding user $user"
 		adduser $user -s /bin/false -D -H -h /mnt/$user -g "samba,pass=$password" && smbpasswd $user $password
 	else
-		if [ $(grep -r "^$user:" /etc/passwd | cut -d':' -f5) != "samba,pass=$password" ] ; then
-			echo "change user $user"
-			deluser $user
-			adduser $user -s /bin/false -D -H -h /mnt/$user -g "samba,pass=$password" && smbpasswd $user $password
+		tmp=$(grep -r "^$user:" /etc/passwd | cut -d":" -f5)
+		if $(echo $tmp | grep -rq "^samba") ; then
+			if [ "$tmp" != "samba,pass=$password" ] ; then
+				echo "change user $user"
+				deluser $user
+				adduser $user -s /bin/false -D -H -h /mnt/$user -g "samba,pass=$password" && smbpasswd $user $password
+			fi
+		else
+			echo "activating samba for system user $user"
+			smbpasswd $user $password
 		fi
 	fi
 }
@@ -31,15 +37,18 @@ samba_user_exists()
 
 purgepasswd()
 {
-	for us in `grep -r "^.*:x:.*:.*:samba.*:" /etc/passwd | cut -d":" -f1`; do
-		[ -z "$(config_foreach samba_user_exists sambausers $us)" ] && smbpasswd -del $us && deluser $us
+	for us in `grep -r "^.*:" /etc/samba/smbpasswd | cut -d":" -f1`; do
+		if [ -z "$(config_foreach samba_user_exists sambausers $us)" ] ; then
+			smbpasswd -del $us
+			grep -r "^$us:" /etc/passwd | cut -d":" -f5 | grep -rq "^samba" && deluser $us
+		fi
 	done
 }
 
 purgepasswd_force()
 {
+	echo "" > /etc/samba/smbpasswd
 	for us in `grep ":/mnt/" /etc/passwd | cut -d":" -f1`; do
-		smbpasswd -del $us
 		deluser $us
 	done
 }
@@ -153,6 +162,7 @@ stop_service() {
 
 reload_service() {
 	stop
+	purgepasswd_force #just in case...
 	start
 }
 

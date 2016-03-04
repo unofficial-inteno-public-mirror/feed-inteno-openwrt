@@ -46,7 +46,7 @@ purgepasswd_force()
 
 smb_header() {
 	local interface
-	config_get interface $1 interface "loopback lan"
+	config_get interface $1 interface
 
 	# resolve interfaces
 	local interfaces=$(

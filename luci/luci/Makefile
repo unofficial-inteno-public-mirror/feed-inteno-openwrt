@@ -458,12 +458,11 @@ $(eval $(call application,speedtest,LuCI Speed Test application,\
 $(eval $(call application,iup,LuCI Support for Provisioning,\
 	+PACKAGE_luci-app-iup:iup))
 
-$(eval $(call application,dect,LuCI Support for DECT,\
-       +PACKAGE_luci-app-dect:dectmngr))
+$(eval $(call application,dect,LuCI Support for DECT, ))
 
 $(eval $(call application,snmp,LuCI Support for SNMP,\
        +PACKAGE_luci-app-snmp:snmpd))
-       
+
 $(eval $(call application,port-management,LuCI Support for Port Management,\
 	+PACKAGE_luci-app-port-management:port-management))
 

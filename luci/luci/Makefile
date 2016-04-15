@@ -55,6 +55,7 @@ endef
 
 define Package/luci-lib-core/config
        choice
+	depends on PACKAGE_luci-lib-core
                prompt "Build Target"
                default PACKAGE_luci-lib-core_source
 
@@ -123,6 +124,7 @@ endef
 
 define Package/luci-lib-nixio/config
 	choice
+	depends on PACKAGE_luci-lib-nixio
 		prompt "TLS Provider"
 		default PACKAGE_luci-lib-nixio_notls
 

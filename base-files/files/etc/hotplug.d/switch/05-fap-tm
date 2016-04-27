@@ -1,0 +1,13 @@
+case "$ACTION" in
+	add|register)
+		case $INTERFACE in
+			eth*)
+				fapctl tm --enable --if $INTERFACE --auto
+				fapctl tm --apply --if $INTERFACE
+			;;
+		esac
+	;;
+	remove|unregister)
+	;;
+esac
+

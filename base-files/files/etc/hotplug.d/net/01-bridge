@@ -1,0 +1,29 @@
+include /lib/network
+
+[ ${INTERFACE:0:2} == "wl" ] && exit
+
+case "$ACTION" in
+        add|register)
+		case "$INTERFACE" in
+			# disable ipv6 if it is an unmanaged bridge
+			br-*)
+				local net=${INTERFACE:3}
+				local proto=$(uci -q get network.$net.proto)
+				if [ -z "$proto" -o "$proto" == "none" ]; then
+					echo 1 > /proc/sys/net/ipv6/conf/$INTERFACE/disable_ipv6
+				fi
+			;;
+			# if an uplink device belongs to a bridge
+			# make sure brige macaddress becomes its macaddress
+			*.*)
+				local net=$(get_network_of $INTERFACE)
+				local typ=$(uci -q get network.$net.type)
+				if [ "$typ" == "bridge" ]; then
+					local mac=$(ifconfig $INTERFACE | grep HWaddr | awk '{print$NF}')
+					ifconfig br-$net hw ether $mac 2>/dev/null
+				fi
+			;;
+		esac
+        ;;
+esac
+

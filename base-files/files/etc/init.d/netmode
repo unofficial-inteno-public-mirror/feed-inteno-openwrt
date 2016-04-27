@@ -1,0 +1,90 @@
+#!/bin/sh /etc/rc.common
+
+START=10
+USE_PROCD=1
+
+. /usr/share/libubox/jshn.sh
+
+local modedir=$(uci -q get netmode.setup.dir)
+[ -n "$modedir" ] || modedir="/etc/netmodes"
+
+populate_netmodes() {
+	[ -f /etc/config/netmode -a -d $modedir ] || return
+
+	delete_netmode() {
+		uci delete netmode.$1
+	}
+
+	config_load netmode
+
+	config_foreach delete_netmode netmode
+	uci commit netmode
+
+	local keys lang desc exp
+	for mode in $(ls $modedir); do
+			lang=""
+			desc=""
+			exp=""
+			uci -q set netmode.$mode=netmode
+			uci -q set netmode.$mode.conf=$mode
+			json_load "$(cat $modedir/$mode/DETAILS)"
+
+			json_select description
+			json_get_keys keys
+			for k in $keys; do
+				json_get_keys lang $k
+				lang=$(echo $lang | sed 's/^[ \t]*//;s/[ \t]*$//')
+				json_select $k
+				json_get_var desc $lang
+				uci -q set netmode.$mode."desc_$lang"="$desc"
+				[ "$lang" == "en" ] && uci -q set netmode.$mode."desc"="$desc"
+				json_select ..
+			done
+			json_select ..
+
+			json_select explanation
+			json_get_keys keys
+			for k in $keys; do
+				json_get_keys lang $k
+				lang=$(echo $lang | sed 's/^[ \t]*//;s/[ \t]*$//')
+				json_select $k
+				json_get_var exp $lang
+				uci -q set netmode.$mode."exp_$lang"="$exp"
+				[ "$lang" == "en" ] && uci -q set netmode.$mode."exp"="$exp"
+				json_select ..
+			done
+			json_select ..
+
+			json_get_var cred credentials
+			uci -q set netmode.$mode.askcred="$cred"
+	done
+	uci commit netmode
+}
+
+switch_netmode() {
+	[ -f /etc/config/netmode -a -d $modedir ] || return
+
+	config_load netmode
+
+	config_get curmode setup curmode
+	config_get conf $curmode conf
+	cp /etc/netmodes/$conf/* /etc/config/
+	rm -f /etc/config/DETAILS
+	sync
+	local reboot=$(uci -q get netmode.$curmode.reboot)
+	[ "$reboot" == "0" ] || reboot &
+}
+
+start_service() {
+	populate_netmodes
+}
+
+reload_service() {
+        switch_netmode
+}
+
+service_triggers()
+{
+	procd_add_reload_trigger netmode
+}
+

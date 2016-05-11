@@ -42,7 +42,7 @@ endef
 
 define Package/shflags/install
 	$(INSTALL_DIR) $(1)/usr/share/shflags
-	$(CP) $(PKG_BUILD_DIR)/source/1.0/src/shflags  $(1)/usr/share/shflags/shflags.sh
+	$(CP) $(PKG_BUILD_DIR)/src/shflags  $(1)/usr/share/shflags/shflags.sh
 endef
 
 $(eval $(call BuildPackage,shflags))

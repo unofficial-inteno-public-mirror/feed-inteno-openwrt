@@ -8,14 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=shflags
-PKG_REV:=191
-PKG_VERSION:=1.0.4
+PKG_VERSION:=1.2.0
 PKG_RELEASE=$(PKG_SOURCE_VERSION)
 
-PKG_SOURCE_PROTO:=svn
-PKG_SOURCE_URL:=http://shflags.googlecode.com/svn/trunk/
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/kward/shflags
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=$(PKG_REV)
+PKG_SOURCE_VERSION:=f7680561e6e6e430ee171ca0e49dde88c58174cd
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
 
 include $(INCLUDE_DIR)/package.mk
@@ -25,7 +24,7 @@ define Package/shflags
   CATEGORY:=Libraries
   TITLE:=shflags
   DEPENDS:=+getopt
-  URL:=http://code.google.com/p/shflags/
+  URL:=https://github.com/kward/shflags
 endef
 
 define Package/shflags/description

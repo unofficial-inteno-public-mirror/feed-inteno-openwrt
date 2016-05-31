@@ -44,11 +44,8 @@ purgepasswd()
 			grep -r "^$us:" /etc/passwd | cut -d":" -f5 | grep -rq "^samba" && deluser $us
 		fi
 	done
-}
 
-purgepasswd_force()
-{
-	echo "" > /etc/samba/smbpasswd
+	# delete left over samba users in case they were not in /etc/samba/smbpasswd
 	for us in `grep ":/mnt/" /etc/passwd | cut -d":" -f1`; do
 		deluser $us
 	done
@@ -163,7 +160,6 @@ stop_service() {
 
 reload_service() {
 	stop
-	purgepasswd_force #just in case...
 	start
 }
 

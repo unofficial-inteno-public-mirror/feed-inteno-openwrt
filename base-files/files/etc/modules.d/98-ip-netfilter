@@ -1,3 +1,5 @@
+iptable_nat
+ipt_MASQUERADE
 ipt_REDIRECT
 gre
 ip_gre
@@ -16,6 +18,7 @@ nf_nat_rtsp
 nf_nat_tftp
 xt_DSCP
 xt_LOG
+xt_NOTRACK
 xt_SKIPLOG
 xt_connmark
 xt_dscp

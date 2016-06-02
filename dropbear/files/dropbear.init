@@ -102,6 +102,7 @@ keygen()
 	lock /tmp/.switch2jffs
 	mkdir -p /etc/dropbear
 	mv /tmp/dropbear/dropbear_* /etc/dropbear/
+	sync
 	lock -u /tmp/.switch2jffs
 	chown root /etc/dropbear
 	chmod 0700 /etc/dropbear
@@ -165,7 +166,7 @@ killclients()
 		skip=0
 		for server in ${ignore}
 		 do
-			if [ "${pid}" = "${server}" ]
+			if [ "${pid}" == "${server}" ]
 			 then
 				skip=1
 				break

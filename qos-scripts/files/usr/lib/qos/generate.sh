@@ -118,20 +118,23 @@ parse_matching_rule() {
 				append "$var" "-m comment --comment '$value'"
 			;;
 			*:tos)
-                                add_insmod xt_dscp
-                                case "$value" in
-                                        !*) append "$var" "-m tos ! --tos $value";;
-                                        *) append "$var" "-m tos --tos $value"
-                                esac
+				for vl in $value; do
+		                        case "$vl" in
+		                                !*) append "$var" "-m tos ! --tos $vl";;
+		                                *) append "$var" "-m tos --tos $vl";;
+		                        esac
+				done
                         ;;
 			*:dscp)
                                 add_insmod xt_dscp
 				dscp_option="--dscp"
-                                [ -z "${value%%[EBCA]*}" ] && dscp_option="--dscp-class"
-				case "$value" in
-                                       	!*) append "$var" "-m dscp ! $dscp_option $value";;
-                                       	*) append "$var" "-m dscp $dscp_option $value"
-                                esac
+				for vl in $value; do
+		                        [ -z "${vl%%[EBCA]*}" ] && dscp_option="--dscp-class"
+					case "$vl" in
+						!*) append "$var" "-m dscp ! $dscp_option $vl";;
+						*) append "$var" "-m dscp $dscp_option $vl";;
+		                        esac
+				done
                         ;;
 			*:direction)
 				value="$(echo "$value" | sed -e 's,-,:,g')"
@@ -206,7 +209,7 @@ config_cb() {
 	config_get TYPE "$CONFIG_SECTION" TYPE
 	case "$TYPE" in
 		interface)
-			config_get_bool enabled "$CONFIG_SECTION" enabled 1
+			config_get_bool enabled "$CONFIG_SECTION" enabled 0
 			[ 1 -eq "$enabled" ] || return 0
 			config_get classgroup "$CONFIG_SECTION" classgroup
 			config_set "$CONFIG_SECTION" ifbdev "$C"
@@ -280,12 +283,16 @@ start_interface() {
 	[ -z "$device" -o 1 -ne "$enabled" ] && {
 		return 1 
 	}
+
+	# disable flow cache if bandwidth limit is enabled
+	fcctl disable >/dev/null 2>&1
+
 	config_get upload "$iface" upload
 	config_get_bool halfduplex "$iface" halfduplex
 	config_get download "$iface" download
 	config_get classgroup "$iface" classgroup
 	config_get_bool overhead "$iface" overhead 0
-	
+
 	download="${download:-${halfduplex:+$upload}}"
 	enum_classes "$classgroup"
 	for dir in ${halfduplex:-up} ${download:+down}; do
@@ -340,7 +347,7 @@ tc filter add dev $device parent 1: protocol ip prio 10 u32 match u32 0 0 flowid
 	elif [ -n "$download" ]; then
 		append dev_${dir} "tc qdisc del dev $device ingress >&- 2>&-
 tc qdisc add dev $device ingress
-tc filter add dev $device parent ffff: protocol ip prio 1 u32 match u32 0 0 flowid 1:1 action connmark action mirred egress redirect dev ifb$ifbdev" "$N"
+tc filter add dev $device parent ffff: protocol ip prio 1 u32 match u32 0 0 flowid 1:1 action mirred egress redirect dev ifb$ifbdev" "$N"
 	fi
 	add_insmod cls_fw
 	add_insmod sch_hfsc
@@ -376,6 +383,8 @@ add_rules() {
 		config_get target "$target" classnr
 		config_get options "$rule" options
 
+                [ -n "$target" ] || return
+
 		## If we want to override the TOS field, let's clear the DSCP field first.
 		[ ! -z "$(echo $options | grep 'TOS')" ] && {
 			s_options=${options%%TOS}
@@ -385,7 +394,7 @@ add_rules() {
 			unset iptrule
 		}
 
-		target=$(($target | ($target << 4)))
+		target="$(($target | ($target << 4)))"
 		parse_matching_rule iptrule "$rule" "$options" "$prefix" "-j MARK --set-mark $target/0xff"
 		append "$var" "$iptrule" "$N"
 	done
@@ -474,6 +483,8 @@ C="0"
 for iface in $INTERFACES; do
 	export C="$(($C + 1))"
 done
+
+fcctl enable >/dev/null 2>&1
 
 case "$1" in
 	all)

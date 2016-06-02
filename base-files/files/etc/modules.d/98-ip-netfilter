@@ -24,3 +24,4 @@ xt_connmark
 xt_dscp
 xt_mark
 xt_statistic
+xt_string

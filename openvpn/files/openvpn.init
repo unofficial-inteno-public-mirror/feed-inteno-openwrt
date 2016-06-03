@@ -58,20 +58,27 @@ openvpn_add_instance() {
 	local name="$1"
 	local dir="$2"
 	local conf="$3"
+	local up="$4"
 
-	procd_open_instance
-	procd_set_param command "$PROG"	\
+	SERVICE_DAEMONIZE=1
+	service_start $PROG \
 		--syslog "openvpn($name)" \
 		--status "/var/run/openvpn.$name.status" \
 		--cd "$dir" \
-		--config "$conf"
-	procd_set_param file "$dir/$conf"
-	procd_set_param respawn
-	procd_close_instance
+		--config "$conf" \
+		--auth-user-pass "$up" \
+		--route-noexec \
+		--script-security "2" \
+		--up "/etc/openvpn/openvpn-up.sh" \
+		--down "/etc/openvpn/openvpn-down.sh"
 }
 
 start_instance() {
 	local s="$1"
+
+	local auth_user;
+	local auth_pass;
+	local up="openvpn-$s-userpass.txt"
 
 	config_get config "$s" config
 	config="${config:+$(readlink -f "$config")}"
@@ -81,16 +88,28 @@ start_instance() {
 		return 1
 	}
 
+	config_get auth_user "$s" auth_user
+	config_get auth_pass "$s" auth_pass
+
 	[ ! -d "/var/run" ] && mkdir -p "/var/run"
 
 	if [ ! -z "$config" ]; then
 		append UCI_STARTED "$config" "$LIST_SEP"
-		openvpn_add_instance "$s" "${config%/*}" "$config"
+		if [ -n "$auth_user" ] && [ -n "$auth_pass" ]; then
+			echo -e "$auth_user\n$auth_pass\n" > $(dirname $config)/$up
+			chmod go-rwx $(dirname $config)/$up
+		fi
+		openvpn_add_instance "$s" "${config%/*}" "$config" "$up"
 		return
 	fi
 
 	[ ! -d "/var/etc" ] && mkdir -p "/var/etc"
 	[ -f "/var/etc/openvpn-$s.conf" ] && rm "/var/etc/openvpn-$s.conf"
+
+	if [ -n "$auth_user" ] && [ -n "$auth_pass" ]; then
+		echo -e "$auth_user\n$auth_pass\n" > /var/etc/$up
+		chmod go-rwx /var/etc/$up
+	fi
 
 	# append flags
 	append_bools "$s" \
@@ -126,10 +145,17 @@ start_instance() {
 		tun_mtu tun_mtu_extra txqueuelen user verb down push up \
 		ifconfig_ipv6 route_ipv6 server_ipv6 ifconfig_ipv6_pool ifconfig_ipv6_push iroute_ipv6
 
-	openvpn_add_instance "$s" "/var/etc" "openvpn-$s.conf"
+	openvpn_add_instance "$s" "/var/etc" "openvpn-$s.conf" "$up"
 }
 
 start_service() {
+
+	local cfg_to_parse="/var/etc/openvpn-for-uci.conf"
+	if [ -f "$cfg_to_parse" ]; then
+		/etc/openvpn/openvpn-ovpn-to-uci.sh $cfg_to_parse
+	fi
+
+
 	config_load 'openvpn'
 	config_foreach start_instance 'openvpn'
 
@@ -151,4 +177,17 @@ start_service() {
 			openvpn_add_instance "$name" "${path%/*}" "$path"
 		fi
 	done
+}
+
+stop_service() {
+	service_stop $PROG
+}
+
+reload_service() {
+	stop
+	start
+}
+
+service_triggers() {
+	procd_add_reload_trigger "openvpn"
 }

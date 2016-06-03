@@ -112,6 +112,16 @@ define Package/openvpn-$(BUILD_VARIANT)/install
 		files/openvpn.init \
 		$(1)/etc/init.d/openvpn
 
+	$(INSTALL_BIN) \
+		files/openvpn-up.sh \
+		$(1)/etc/openvpn/
+	$(INSTALL_BIN) \
+		files/openvpn-down.sh \
+		$(1)/etc/openvpn/
+	$(INSTALL_BIN) \
+		files/openvpn-ovpn-to-uci.sh \
+		$(1)/etc/openvpn/
+
 	$(INSTALL_CONF) files/openvpn.config \
 		$(1)/etc/config/openvpn
 

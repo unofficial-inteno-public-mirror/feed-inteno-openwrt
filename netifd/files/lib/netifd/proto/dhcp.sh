@@ -49,7 +49,7 @@ proto_dhcp_setup() {
 	[ "$delegate" = "0" ] && proto_export "IFACE6RD_DELEGATE=0"
 
 	proto_export "INTERFACE=$config"
-	proto_run_command "$config" udhcpc \
+	proto_run_command "$config" udhcpc -R \
 		-p /var/run/udhcpc-$iface.pid \
 		-s /lib/netifd/dhcp.script \
 		-f -t 0 -i "$iface" \

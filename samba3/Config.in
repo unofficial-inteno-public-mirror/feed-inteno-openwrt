@@ -1,6 +1,6 @@
 config SAMBA3_CONFIG_DEBUG 
 	bool "Enable Logging for samba3"
-	depends PACKAGE_samba3
+	depends on PACKAGE_samba3
 	default n
 	help
 		Enables debugging support (will make binaries *much* bigger)
@@ -8,7 +8,7 @@ config SAMBA3_CONFIG_DEBUG
 
 config SAMBA3_CONFIG_SMALLER
 	bool "Make samba3 even smaller"
-	depends PACKAGE_samba3
+	depends on PACKAGE_samba3
 	default y
 	help
 		Removes support for ???
@@ -16,7 +16,7 @@ config SAMBA3_CONFIG_SMALLER
 
 config SAMBA3_CONFIG_NO_PRINTING
 	bool "Remove shared printing support"
-	depends PACKAGE_samba3
+	depends on PACKAGE_samba3
 	default y
    	help
 		Removes shared printing support.

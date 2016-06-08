@@ -353,8 +353,12 @@ get_image() { # <source> [ <command> ]
 	local conc="$2"
 	local cmd
 
+	local sysinfo=$(ubus call router quest "{ \"info\": \"system\" }")
+	json_load "$sysinfo"
+	json_get_var firmware firmware
+
 	case "$from" in
-		http://*|ftp://*) cmd="wget -O- -q";;
+		http://*|ftp://*) cmd="wget -O- -q --user-agent=\"$firmware\"";;
 		*) cmd="cat";;
 	esac
 	if [ -z "$conc" ]; then

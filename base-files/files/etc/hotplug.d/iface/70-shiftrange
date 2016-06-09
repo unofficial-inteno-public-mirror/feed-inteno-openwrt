@@ -30,7 +30,7 @@ get_new_ip() {
 if [ "$islan" != "1" ] && [ "$proto" != "none" ]; then
 	network_get_ipaddr wanip $INTERFACE
 
-	net=$(netcheck -h $wanip -n)
+	[ -n "$wanip" ] && net=$(netcheck -h $wanip -n)
 
 	if [ -n "$net" ]; then
 		netip="$(uci -q get network.$net.ipaddr)"
@@ -41,7 +41,6 @@ if [ "$islan" != "1" ] && [ "$proto" != "none" ]; then
 fi
 
 if [ $changed -eq 1 ]; then
-	rm -f /tmp/wireless/md5sum
 	ubus call uci commit '{"config":"network"}'
 fi
 

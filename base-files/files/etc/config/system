@@ -18,5 +18,5 @@ config timeserver 'ntp'
 config upgrade
 
 config log 'watchdog'
-        option enable '0'
+        option enable '1'
 

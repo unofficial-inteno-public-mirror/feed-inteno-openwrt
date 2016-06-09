@@ -75,14 +75,13 @@ pivot() { # <new_root> <old_root>
 	}
 }
 
-fopivot() { # <rw_root> <work_dir> <ro_root> <dupe?>
-	/bin/mount -o noatime,lowerdir=/,upperdir=$1,workdir=$2 -t overlay "overlayfs:$1" /mnt
-	pivot /mnt $3
+fopivot() { # <rw_root> <ro_root> <dupe?>
+	/bin/mount -o noatime,lowerdir=/,upperdir=$1 -t overlayfs "overlayfs:$1" /mnt
+	pivot /mnt $2
 }
 
 ramoverlay() {
 	mkdir -p /tmp/root
 	/bin/mount -t tmpfs -o noatime,mode=0755 root /tmp/root
-	mkdir -p /tmp/root/root /tmp/root/work
-	fopivot /tmp/root/root /tmp/root/work /rom 1
+	fopivot /tmp/root /rom 1
 }

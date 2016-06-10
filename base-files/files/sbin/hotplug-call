@@ -11,6 +11,8 @@ USER=root
 export PATH LOGNAME USER
 export DEVICENAME="${DEVPATH##*/}"
 
+ubus send hotplug.$HOTPLUG_TYPE "{\"interface\":\"$INTERFACE\",\"action\":\"$ACTION\"}"
+
 [ \! -z "$1" -a -d /etc/hotplug.d/$1 ] && {
 	for script in $(ls /etc/hotplug.d/$1/* 2>&-); do (
 		[ -f $script ] && . $script

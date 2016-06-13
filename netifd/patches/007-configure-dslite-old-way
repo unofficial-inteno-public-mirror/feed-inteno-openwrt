@@ -1,0 +1,50 @@
+diff --git a/system-linux.c b/system-linux.c
+index 884b641..2f25528 100644
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -2492,6 +2492,45 @@ failure:
+ 		return system_add_gre_tunnel(name, "ip6gre", link, tb, true);
+ 	} else if (!strcmp(str, "gretapip6")) {
+ 		return system_add_gre_tunnel(name, "ip6gretap", link, tb, true);
++#else
++	} else if (!strcmp(str, "ipip6")) {
++		char cmdStr[512];
++		char remoteIp[INET6_ADDRSTRLEN];
++		char addr6[INET6_ADDRSTRLEN];
++
++		struct ip6_tnl_parm p = {
++			.link = link,
++			.proto = IPPROTO_IPIP,
++			.hop_limit = (ttl) ? ttl : 64,
++			.encap_limit = 4,
++		};
++
++		if ((cur = tb[TUNNEL_ATTR_LOCAL]) &&
++				inet_pton(AF_INET6, blobmsg_data(cur), &p.laddr) < 1)
++			return -EINVAL;
++
++		if ((cur = tb[TUNNEL_ATTR_REMOTE]) &&
++				inet_pton(AF_INET6, blobmsg_data(cur), &p.raddr) < 1)
++			return -EINVAL;
++
++		strncpy(p.name, name, sizeof(p.name));
++		//if (tunnel_ioctl("ip6tnl0", SIOCADDTUNNEL, &p) < 0)
++		//      return -1;
++		inet_ntop(AF_INET6, &(p.raddr), remoteIp, INET6_ADDRSTRLEN);
++		inet_ntop(AF_INET6, &(p.laddr), addr6, INET6_ADDRSTRLEN);
++		snprintf(cmdStr, sizeof(cmdStr),"ip -6 tunnel add %s mode ip4ip6 remote %s local %s tclass inherit dscp inherit", name, remoteIp, addr6);
++		system(cmdStr);
++		snprintf(cmdStr, sizeof(cmdStr), "ip link set dev %s up", name);
++		system(cmdStr);
++		snprintf(cmdStr, sizeof(cmdStr), "ip -6 addr add %s dev %s", addr6, name);
++		system(cmdStr);
++		snprintf(cmdStr, sizeof(cmdStr), "ip ro add default dev %s", name);
++		system(cmdStr);
++		/* RFC 6333 section 5.7: 192.0.0.2/29 is reserved for B4 */
++		snprintf(cmdStr, sizeof(cmdStr), "ip addr add 192.0.0.2/29 dev %s", name);
++		system(cmdStr);
++
++		return 0;
+ #endif
+ 	} else if (!strcmp(str, "ipip")) {
+ 		return system_add_proto_tunnel(name, IPPROTO_IPIP, link, tb);

@@ -109,15 +109,3 @@
  	time_t start_time;
  	enum interface_state state;
 
---- a/ubus.c
-+++ b/ubus.c
-@@ -1208,6 +1208,9 @@ netifd_ubus_add_interface(struct interface *iface)
- 		free(name);
- 		obj->name = NULL;
- 	}
-+
-+	if (iface->anywan)
-+		netifd_ubus_interface_event(iface, true);
- }
- 
- void

@@ -80,6 +80,19 @@ setup_interface () {
 
 		ubus call network add_dynamic "$(json_dump)"
 	fi
+
+	if [ -f /etc/config/provisioning -a -f /sbin/iup ]; then
+		iup "{ \
+			'interface':'$INTERFACE', \
+			'privopt224':'$privopt224', \
+			'vendorspecinf':'$vendorspecinf', \
+			'httpurl128':'$httpurl128', \
+			'tftp':'$tftp', \
+			'bootfile':'$bootfile', \
+			'vlanid':'$vlanid', \
+			'vlanpriority':'$vlanpriority' \
+		}"
+	fi
 }
 
 deconfig_interface() {

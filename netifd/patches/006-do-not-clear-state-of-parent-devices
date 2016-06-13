@@ -1,0 +1,42 @@
+diff --git a/system-linux.c b/system-linux.c
+index 5732da8..884b641 100644
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -793,6 +793,27 @@ out:
+ 	nl_cb_put(cb);
+ }
+ 
++static int system_if_is_parent_dev(const char *name)
++{
++	FILE *fp;
++	char cmnd[64];
++	char baseif[8];
++	bool ret = 0;
++
++	if ((strstr(name, "atm") || strstr(name, "ptm")) && !strchr(name, '.'))
++		ret = 1;
++	else if (strstr(name, "eth") && !strchr(name, '.')) {
++		sprintf(cmnd, "uci -q get layer2_interface_ethernet.Wan.baseifname | tr -d '\n'");
++		if ((fp = popen(cmnd, "r"))) {
++			if(fgets(baseif, sizeof(baseif), fp) && !strcmp(baseif, name))
++				ret = 1;
++			pclose(fp);
++		}
++	}
++
++	return ret;
++}
++
+ /*
+  * Clear bridge (membership) state and bring down device
+  */
+@@ -805,6 +826,9 @@ void system_if_clear_state(struct device *dev)
+ 	if (dev->external || !dev->ifindex)
+ 		return;
+ 
++	if (system_if_is_parent_dev(dev->ifname))
++		return;
++
+ 	system_if_flags(dev->ifname, 0, IFF_UP);
+ 
+ 	if (system_is_bridge(dev->ifname, buf, sizeof(buf))) {

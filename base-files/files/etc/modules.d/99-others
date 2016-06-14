@@ -7,3 +7,6 @@ qcaux
 qcserial
 dns_resolver
 cifs
+ts_bm
+ts_fsm
+ts_kmp

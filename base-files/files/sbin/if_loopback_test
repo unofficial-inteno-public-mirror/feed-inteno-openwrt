@@ -1,0 +1,77 @@
+#!/bin/sh
+# Iopsys interface loopback test, primarily for EG300 SFP.
+# Test require external physical looping of interface.
+# Works by sending a fixed number of arp requests on the given
+# interface and make sure at least this many packets are received
+# and that the number of packets transmitted and received are
+# ~equal.
+#
+# Usage: if_loopback_test [-v] IFACE
+#  -v     Verbose mode
+#  IFACE  Interface to use, default eth2.1
+#
+# Will echo "good" or "bad" depending on verdict.
+#
+# (C) 2016 Inteno Broadband Technology AB
+#
+
+if="eth2.1"
+ipaddr="10.10.99.99/8"
+remote="10.10.99.100"
+pcount=10
+tmpfile="/tmp/loopback.test"
+
+if [ "$1" == "-v" ]; then
+	VERBOSE=1
+	shift
+fi
+
+[ -n "$1" ] && if="$1"
+
+
+if ! ifconfig $if |grep -q "UP BROADCAST"; then
+	echo "$if interface not up"
+	exit 1
+fi
+
+ip addr add $ipaddr dev $if
+sleep 1s
+
+ifconfig $if > $tmpfile
+rx_start=$(cat $tmpfile |awk -F '[ :]+' '/RX packets/ {print$4}')
+tx_start=$(cat $tmpfile |awk -F '[ :]+' '/TX packets/ {print$4}')
+
+i=0
+while [ $i -lt $pcount ]; do
+	arping -c 1 -w 1 -I $if $remote > /dev/null
+	i=$((i+1))
+done
+
+ifconfig $if > $tmpfile
+rx_end=$(cat $tmpfile |awk -F '[ :]+' '/RX packets/ {print$4}')
+tx_end=$(cat $tmpfile |awk -F '[ :]+' '/TX packets/ {print$4}')
+
+ip addr del $ipaddr dev $if
+rm $tmpfile
+
+rx_diff=$((rx_end - rx_start))
+tx_diff=$((tx_end - tx_start))
+diff=$((rx_diff - tx_diff))
+
+if [ -n "$VERBOSE" ]; then
+	echo "=== Loopback test on $if ==="
+	echo "RX start=$rx_start end=$rx_end diff=$rx_diff"
+	echo "TX start=$tx_start end=$tx_end diff=$tx_diff"
+	echo "RX/TX diff=$diff"
+	echo -n "Link is "
+fi
+
+# Additional packets may be transmitted by background processes
+# Allow a diff of +/- 1 between TX and RX if the sample should
+# be taken between TX and RX of a background process packet.
+[ \
+  $rx_diff -ge $pcount -a \
+  $diff -ge -1 -a \
+  $diff -le 1 \
+] && echo good || echo bad
+

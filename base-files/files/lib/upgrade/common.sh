@@ -1,5 +1,7 @@
 #!/bin/sh
 
+. /usr/share/libubox/jshn.sh
+
 RAM_ROOT=/tmp/root
 
 ldd() { LD_TRACE_LOADED_OBJECTS=1 $*; }

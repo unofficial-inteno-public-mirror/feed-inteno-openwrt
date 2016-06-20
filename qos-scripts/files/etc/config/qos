@@ -4,8 +4,6 @@
 config interface wan
 	option classgroup  "Default"
 	option enabled      0
-	option upload       10000
-	option download     100000
 
 # RULES:
 config classify

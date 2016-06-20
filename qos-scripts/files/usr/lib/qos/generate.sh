@@ -195,8 +195,23 @@ config_cb() {
 	# Section start
 	case "$1" in
 		interface)
+			# use xDSL rates if no specific download/upload limit is given
+			# if connection type is not DSL use 1Gbit/1Gbit
+			local maxdownload="1000000"
+			local maxupload="1000000"
+
+			device="$(find_ifname ${2})"
+
+			case $device in
+				atm*|ptm*)
+					maxdownload=$(xdslctl info --stats 2>/dev/null | grep Bearer | grep rate | awk '{print$11}')
+					maxupload=$(xdslctl info --stats 2>/dev/null | grep Bearer | grep rate | awk '{print$6}')
+				;;
+			esac
+
 			config_set "$2" "classgroup" "Default"
-			config_set "$2" "upload" "128"
+			config_set "$2" "upload" "$maxupload"
+			config_set "$2" "download" "$maxdownload"
 		;;
 		classify|default|reclassify)
 			option_cb() {

@@ -92,12 +92,12 @@ config gpio_led gpio_leds
 	list leds GbE_yellow
 
 config gpio_led Status_green
-	option addr	4
+	option addr	22
 	option active   hi
 	option mode     sr
 
 config gpio_led Status_red
-	option addr     5
+	option addr     23
 	option active   hi
 	option mode     sr
 

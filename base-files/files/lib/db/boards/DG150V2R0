@@ -110,7 +110,7 @@ config gpio_led Ethernet_green
 	option mode     sr
 
 config gpio_led Status_red
-	option addr     2
+	option addr     8
 	option active   hi
 	option mode     sr
 

@@ -173,7 +173,7 @@ platform_pre_upgrade() {
 	[ -n "$DELAY" ] && sleep "$DELAY"
 	v "Rebooting system ..."
 	sync
-	echo upgrade > /tmp/reboot_reason
+	export REBOOT_REASON=upgrade
 	reboot -f
 }
 

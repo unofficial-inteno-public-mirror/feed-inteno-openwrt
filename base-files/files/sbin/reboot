@@ -4,17 +4,17 @@
 # this to be able to detect a reboot done by watchdog
 
 # if no reason then set manual
-if [ -z "$REBOOT_REASON" ]
+if [ ! -f /tmp/reboot_reason ]
 then
-    REBOOT_REASON="manual"
+   echo manual > /tmp/reboot_reason
 fi
 
 # First try the overlay this maight fail
-echo $REBOOT_REASON 2>/dev/null >/etc/reboot
+cat /tmp/reboot_reason 2>/dev/null >/etc/reboot
 if [ $? != 0 ]
 then
     # overlayfs gave error probably a defaultreset try the main filesystem
-    echo $REBOOT_REASON >/rom/etc/reboot
+    cat /tmp/reboot_reason 2>/dev/null >/rom/etc/reboot
 fi
 
 sync

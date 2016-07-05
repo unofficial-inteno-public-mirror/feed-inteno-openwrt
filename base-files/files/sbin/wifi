@@ -123,7 +123,7 @@ wifi_detect() {
 				bno=5
 				doth="1"
 				dfsc="${PDFS:-1}"
-				$(isAC $pcid) && hwmode="${PHW5:-11ac}"
+				#$(isAC $pcid) && hwmode="${PHW5:-11ac}"
 			else
 				freq="2.4G"
 				hwmode="${PHW2:-auto}"
@@ -769,6 +769,39 @@ wdev_settings() {
 		_WL2G=$device
 	fi
 
+	case $hwmode in
+		11ac)
+			gmode=0
+			nmode=1
+			vhtmode=1
+		;;
+		11n)
+			gmode=0
+			nmode=1
+			vhtmode=0
+		;;
+		11a|11g)
+			gmode=1
+			nmode=0
+			vhtmode=0
+		;;
+		11bg)
+			gmode=1
+			nmode=0
+			vhtmode=0
+		;;
+		11b)
+			gmode=0
+			nmode=0
+			vhtmode=0
+		;;
+		*)
+			gmode=1
+			nmode=-1
+			vhtmode=-1
+		;;
+	esac
+
 	acs_scan_timer=0
 	if [ "$acs_dfs" == "1" ]; then
 		acs_dfs=2
@@ -814,6 +847,9 @@ wdev_settings() {
 	[ "$wme_apsd" == "1" ] && wme_apsd=on || wme_apsd=off
 	[ "$wme_noack" == "1" ] && wme_noack=on || wme_noack=off
 
+	nvram set "$device"_gmode=$gmode
+	nvram set "$device"_nmode=$nmode
+	nvram set "$device"_vhtmode=$vhtmode
 	nvram set "$device"_acs_cs_scan_timer=$acs_scan_timer
 	nvram set "$device"_acs_dfs=$acs_dfs
 	nvram set "$device"_acs_fcs_mode=$acs_fcs

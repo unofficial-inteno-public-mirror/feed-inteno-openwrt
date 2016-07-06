@@ -56,18 +56,6 @@ id_upgrade_reconfig() {
     fi
 }
 
-check_num_mac_address() {
-    local nummac=$(cat /proc/nvram/NumMacAddrs)
-    local boardid=$(cat /proc/nvram/BoardId)
-    if [ "$boardid" != "CG300R0" -a "$boardid" != "DG400R0" ]; then
-        if [ "$nummac" != "00 00 00 08 " ]; then
-            echo "Setting NumMacAddrs to 8"
-            echo "00 00 00 08" >/proc/nvram/NumMacAddrs
-            sync
-        fi
-    fi
-}
-
 feed_rng_entropy() {
     if lsmod |grep -q bcmtrng; then
         echo "Seeding rng from hw trng"
@@ -78,7 +66,6 @@ feed_rng_entropy() {
 brcm_env
 id_upgrade_reconfig
 bcm_dsl_annex
-check_num_mac_address
 brcm_insmod
 feed_rng_entropy
 

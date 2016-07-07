@@ -73,6 +73,11 @@ iptvtest() {
 if [ -n "$timed_check" ]
 then
 	internet_test
+	if [ $netcon -eq 1 ]; then
+		ubus send internet '{"status" : "online"}'
+	else
+		ubus send internet '{"status" : "offline"}'
+	fi
 	return 0
 fi
 
@@ -89,7 +94,11 @@ do
 	fi
 done
 
-if [ $netcon -eq 1 ] && ! pidof wanup >/dev/null; then
-	/sbin/wanup $IFACE &
+if [ $netcon -eq 1 ]; then
+	ubus send internet '{"status" : "online"}'
+	if ! pidof wanup >/dev/null; then
+		/sbin/wanup $IFACE &
+	fi
+else
+	ubus send internet '{"status" : "offline"}'
 fi
-

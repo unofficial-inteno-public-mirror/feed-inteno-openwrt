@@ -160,7 +160,8 @@ parse_matching_rule() {
 				esac
 			;;
 			1:mark)
-				config_get class "${value##!}" classnr
+				#config_get class "${value##!}" classnr
+				class="${value##!}"
 				[ -z "$class" ] && continue;
 				case "$value" in
 					!*) append "$var" "-m mark ! --mark $class/0x0f";;

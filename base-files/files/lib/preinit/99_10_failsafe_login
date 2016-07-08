@@ -8,8 +8,13 @@ failsafe_netlogin () {
 
 failsafe_shell() {
 	lock /tmp/.failsafe
-	/bin/login
 	echo "Please reboot system when done with failsafe network logins"
+	if [ -f /bin/cttyhack ] ; then
+		/bin/cttyhack /bin/login
+	else
+		/bin/login
+	fi
+	reboot
 }
 
 boot_hook_add failsafe failsafe_netlogin

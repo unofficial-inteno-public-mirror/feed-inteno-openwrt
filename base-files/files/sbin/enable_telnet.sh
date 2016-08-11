@@ -1,2 +1,6 @@
 #!/bin/ash
-/usr/sbin/telnetd -l /sbin/iqview_telnet.sh
+
+tool=iqview
+[ -n "$1" ] && tool=$1
+
+/usr/sbin/telnetd -l /sbin/${tool}_telnet.sh

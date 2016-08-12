@@ -136,7 +136,7 @@ option minpress 1000
 config button_map DECT
 list button 9512_dect
 option hotplug dectshort
-option hotplug dectlong
+option hotplug_long dectlong
 option longpress 8000
 
 config button_map EXT

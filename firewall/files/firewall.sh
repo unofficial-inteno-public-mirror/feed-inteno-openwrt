@@ -184,7 +184,7 @@ update_enabled() {
 	if [ "$name" == "wan" ]; then
 		if [ "$(uci -q get firewall.settings.disabled)" == "1" ]; then
 			uci -q set firewall.$section.input="ACCEPT"
-		elif [ "$(uci -q set firewall.$section.input)" == "ACCEPT" ]; then
+		elif [ "$(uci -q get firewall.$section.input)" == "ACCEPT" ]; then
 			uci -q set firewall.$section.input="REJECT"
 		fi                             
 		uci -q commit firewall            

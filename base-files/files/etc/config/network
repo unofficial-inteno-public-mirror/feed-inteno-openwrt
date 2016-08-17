@@ -15,7 +15,7 @@ config interface 'lan'
 config interface 'wan'
 	option type 'anywan'
 	option proto 'dhcp'
-	option hostname 'Inteno_$MAC4'
+	option hostname '$IOPVER'
 	option vendorid '$HARDWAREID-INTENO'
 	option reqopts '43 66 67 128 132 133'
 

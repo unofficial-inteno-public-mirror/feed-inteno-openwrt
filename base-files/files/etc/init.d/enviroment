@@ -38,6 +38,7 @@ handle_configs()
 	local HWVER=$(db get hw.board.hardwareVersion)
 	local RMODEL=$(db get hw.board.routerModel)
 	local DESKEY=$(db get hw.board.desKey)
+	local IOPVER=$(db get hw.board.iopVersion)
 
 	local oid=${BMAC:0:6}
 	local mac=$BMAC
@@ -68,6 +69,7 @@ handle_configs()
 			grep -q "\$SER" /etc/config/$config && sed -i "s/\$SER/$SERIALNR/g" /etc/config/$config
 			grep -q "\$OUI" /etc/config/$config && sed -i "s/\$OUI/$oid/g" /etc/config/$config
 			grep -q "\$HARDWAREID" /etc/config/$config && sed -i "s/\$HARDWAREID/$hardwareid/g" /etc/config/$config
+			grep -q "\$IOPVER" /etc/config/$config && sed -i "s/\$IOPVER/$IOPVER/g" /etc/config/$config
 			[ "$config" == "wireless" ] && grep -q "pskmixedpsk2" /etc/config/$config && sed -i "s/pskmixedpsk2/mixed-psk/g" /etc/config/$config
 		fi
 	done

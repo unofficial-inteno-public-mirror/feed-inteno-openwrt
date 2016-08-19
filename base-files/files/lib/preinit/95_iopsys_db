@@ -85,7 +85,7 @@ iopsys_initialize_db() {
 		esac
 
 		case $WPAKEY in
-			*[a-z]*|*[A-Z]*|*[0-9]*) WPAKEY=$WPAKEY ;;
+			*[a-z]*|*[A-Z]*|*[0-9]*) WPAKEY=$(echo $WPAKEY | sed 's/[ \t]*$//') ;;
 			*) WPAKEY="00000000" ;;
 		esac
 

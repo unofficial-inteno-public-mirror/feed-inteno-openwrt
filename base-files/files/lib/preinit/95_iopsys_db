@@ -69,6 +69,26 @@ iopsys_initialize_db() {
 		BASEMAC=${BASEMAC// /}
 		RFPI=${RFPI// /}
 
+		case $SERIALNR in
+			*[a-z]*|*[A-Z]*|*[0-9]*) SERIALNR=$SERIALNR ;;
+			*) SERIALNR="0000000000" ;;
+		esac
+
+		case $AUTHKEY in
+			*[a-z]*|*[A-Z]*|*[0-9]*) AUTHKEY=$AUTHKEY ;;
+			*) AUTHKEY="0000000000000000" ;;
+		esac
+
+		case $DESKEY in
+			*[a-z]*|*[A-Z]*|*[0-9]*) DESKEY=$DESKEY ;;
+			*) DESKEY="0000000000000000" ;;
+		esac
+
+		case $WPAKEY in
+			*[a-z]*|*[A-Z]*|*[0-9]*) WPAKEY=$WPAKEY ;;
+			*) WPAKEY="00000000" ;;
+		esac
+
 		uci set /lib/db/config/hw.board.cferam="$NEWCFERAM"
 		uci set /lib/db/config/hw.board.filesystem="$FILESYSTEM"
 		uci set /lib/db/config/hw.board.bank="$BANK"

@@ -1123,7 +1123,6 @@ toggle_wifi_device() {
 	[ "${device:0:2}" == "wl" ] || exit
 	if [ "$wlstatus" == "1" ]; then
 		echo "Enabling WiFi Radio $device"
-		uci -q set wireless.status.wlan=1
 		uci -q set wireless.$device.disabled=0
 	else
 		echo "Disabling WiFi Radio $device"

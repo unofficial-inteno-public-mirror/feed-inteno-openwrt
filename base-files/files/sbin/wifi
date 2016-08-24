@@ -220,7 +220,7 @@ EOF
 				if [ "$band" == "b" ]; then
 					uci -q set wireless.$wl.dfsc=""
 					uci -q set wireless.$wl.beamforming=""
-					uci -q set wireless.$wl.bandwidth="20"
+					[ "$(uci -q get wireless.$wl.bandwidth)" == "80" ] && uci -q set wireless.$wl.bandwidth="20"
 					[ "$(uci -q get wireless.$wl.hwmode)" == "11ac" ] && uci -q set wireless.$wl.hwmode="auto"
 				fi
 			fi

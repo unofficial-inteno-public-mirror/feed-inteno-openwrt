@@ -231,6 +231,36 @@ find_used_ports() {
 	echo "$PORTS" | tr ' ' '\n' | sort -un | tr '\n' ' ' | sed 's/^[ \t]*//;s/[ \t]*$//' >/tmp/fw_used_ports
 }
 
+parental_schedule_flowcache_flush() {
+
+	CRONPATH="/etc/crontabs/root"
+	PARENTALCONTROL="sh /etc/firewall.parentalcontrol"
+
+	rule_section() {
+		local rule=$1
+		config_get_bool parental "$rule" parental
+		[ "$parental" == "1" ] || return
+		config_get start_time "$rule" start_time
+		config_get weekdays "$rule" weekdays
+
+		local hour=${start_time%:*}
+		local minute=${start_time#*:}
+		weekdays=${weekdays// /,}
+		local cmd="$PARENTALCONTROL --flowcache-flush"
+
+		# minute hour day month day-of-week command-line-to-execute
+		echo "$minute $hour * * $weekdays $cmd" >>$CRONPATH
+	}
+
+	[ -f $CRONPATH ] || touch $CRONPATH
+	sed -i "\:$PARENTALCONTROL:d" $CRONPATH
+
+	config_foreach rule_section rule
+
+	fsync $CRONPATH
+	/etc/init.d/cron restart
+}
+
 firewall_preconf() {
 	config_load firewall
 	config_foreach update_enabled zone
@@ -240,4 +270,5 @@ firewall_preconf() {
 	reindex_dmzhost
 	http_port_management
 	uci -q commit firewall
+	parental_schedule_flowcache_flush
 }

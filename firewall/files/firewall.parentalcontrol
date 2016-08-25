@@ -1,0 +1,66 @@
+#!/bin/sh
+
+
+# move the parental rules to the begining of the chain and flush the flow cache
+reorder_rules() {
+
+	# get the rules
+	rules="$(fw3 -q print | grep "Parental Rule")"
+	[ -z "$rules" ] && exit
+
+	# get the rules positions in the chain
+	ids="$(iptables -t filter -L delegate_forward --line-numbers | grep -i "Parental Rule" | awk '{print $1}' | sort -nr)"
+	[ -z "$ids" ] && exit
+
+	# get the table name (should be filter)
+	table="$(awk 'NR == 1 {print $3}' <<-EOF
+					$rules
+					EOF
+		)"
+	[ -z "$table" ] && exit
+
+	# get the chain name (should be delegate_forward)
+	chain="$(awk 'NR == 1 {print $5}' <<-EOF
+					$rules
+					EOF
+		)"
+	[ -z "$chain" ] && exit
+
+	# delete the existing rules
+	while read id; do
+		iptables -t $table -D $chain $id || true
+	done <<-EOF
+		$ids
+		EOF
+
+	# insert the parental rules at the begining of the chain
+	while read rule; do
+		# keep same rule, replace --append with --insert
+		rule=${rule/ -A / -I }
+		eval $rule || true
+	done <<-EOF
+		$rules
+		EOF
+}
+
+# flush the flow cache, fcctl flush
+flowcache_flush() {
+	[ $(which fcctl) ] || return
+	while true ; do
+	        fcctl flush >/dev/null 2&>1
+	        rc=$?
+	        [ "$rc" == "0" ] && exit
+	done
+}
+
+main() {
+	if [ "$1" == "--flowcache-flush" ]; then
+		flowcache_flush
+		return
+	fi
+
+	reorder_rules
+	flowcache_flush
+}
+
+main $@

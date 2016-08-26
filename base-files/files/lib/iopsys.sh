@@ -6,7 +6,7 @@
 copy_mounted_overlay() {
 	if [ -e /mnt/overlay/SAVE_OVERLAY ]; then
 		echo "Copying overlay..."
-		cp -rfdp /mnt/overlay/* /
+		cp -rfdp /mnt/overlay/* /overlay/
 		rm -f /overlay/SAVE_OVERLAY
 	fi
 }

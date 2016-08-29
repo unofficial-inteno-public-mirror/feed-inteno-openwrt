@@ -5,7 +5,7 @@
  	if (time->utc)
  		fw3_ipt_rule_addarg(r, false, "--utc", NULL);
 +	else
-+		fw3_ipt_rule_addarg(r, false, "--localtz", NULL);
++		fw3_ipt_rule_addarg(r, false, "--kerneltz", NULL);
  
  	if (d1)
  	{

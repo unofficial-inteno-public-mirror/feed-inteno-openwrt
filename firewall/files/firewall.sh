@@ -171,7 +171,7 @@ reconf_parental()
 			uci -q set firewall."$1".src_port=""
 			uci -q set firewall."$1".dest="*"
 			uci -q set firewall."$1".port=""
-			uci -q set firewall."$1".proto="tcpudp"
+			uci -q set firewall."$1".proto="all"
 		fi
 	}
 	config_foreach reconf rule

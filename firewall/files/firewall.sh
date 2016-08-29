@@ -148,17 +148,8 @@ rematch_duidip6()
 
 reindex_dmzhost()
 {
-	uci -q get firewall.dmzhost >/dev/null || return
-
-	local enabled reload path cfgno
-	enabled=$(uci -q get firewall.dmzhost.enabled)
-	[ "$enabled" == "0" ] && return
-	path=$(uci -q get firewall.dmzhost.path)
-	uci -q delete firewall.dmzhost
-	cfgno=$(uci -q add firewall include)
-	uci -q rename firewall.$cfgno=dmzhost
-	uci -q set firewall.dmzhost.path="$path"
-	uci -q set firewall.dmzhost.reload="1"
+	# move dmzhost section at the end
+	uci -q reorder firewall.dmzhost=65535 || true
 }
 
 reconf_parental()

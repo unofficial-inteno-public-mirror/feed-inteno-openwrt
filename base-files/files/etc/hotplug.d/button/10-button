@@ -145,7 +145,6 @@ case "$ACTION" in
 	}
         [ "dectshort" == "$INTERFACE" ] && {
 	        printf "\n\nDECT button is pressed\n" > /dev/console
-		/usr/bin/dect -b 1 | logger -t hotplug -p user.info
         }
         [ "dectlong" == "$INTERFACE" ] && {
 	        printf "\n\nDECT button is long-pressed\n" > /dev/console
@@ -158,8 +157,6 @@ case "$ACTION" in
 			;;
 		esac
 		uci commit dect
-		/usr/bin/dect -c | logger -t hotplug -p user.info
-		/usr/bin/dect -b 2 | logger -t hotplug -p user.info
         }
 	[ "pairbutton" == "$INTERFACE" ] && {
 		printf "\n\nPair button pressed\n\n" > /dev/console

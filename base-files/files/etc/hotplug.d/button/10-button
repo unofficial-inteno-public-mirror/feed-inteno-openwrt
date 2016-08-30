@@ -144,10 +144,10 @@ case "$ACTION" in
 		rm /tmp/wps_active
 	}
         [ "dectshort" == "$INTERFACE" ] && {
-	        printf "\n\nDECT button is pressed\n" > /dev/console
+	        printf "\nDECT button is pressed\n" > /dev/console
         }
         [ "dectlong" == "$INTERFACE" ] && {
-	        printf "\n\nDECT button is long-pressed\n" > /dev/console
+	        printf "\nDECT button is long-pressed\n" > /dev/console
 		case $(uci get dect.dect.radio) in
 			auto|off)
 				uci set dect.dect.radio=on

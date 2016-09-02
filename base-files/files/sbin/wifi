@@ -383,7 +383,7 @@ vif_settings() {
 	config_get isolate $cfg isolate "0"
 	config_get mode $cfg mode "ap"
 	config_get ssid $cfg ssid ""
-	config_get closed $cfg hidden "0"
+	config_get closed $cfg closed "0"
 	config_get encryption $cfg encryption "*DEL*"
 	config_get cipher $cfg cipher
 	config_get key_index "$vif" key_index "1"

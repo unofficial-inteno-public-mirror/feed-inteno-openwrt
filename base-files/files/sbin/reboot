@@ -14,7 +14,8 @@ echo $REBOOT_REASON 2>/dev/null >/etc/reboot
 if [ $? != 0 ]
 then
     # overlayfs gave error probably a defaultreset try the main filesystem
-    echo $REBOOT_REASON >/rom/etc/reboot
+    mkdir -p /rom/overlay/etc
+    echo $REBOOT_REASON > /rom/overlay/etc/reboot
 fi
 
 sync

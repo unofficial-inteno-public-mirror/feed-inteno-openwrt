@@ -370,7 +370,7 @@ wps_settings() {
 vif_settings() {
 	local cfg=$1
 	local iface=$2
-	local device ifname enabled isolate mode ssid closed network hspot
+	local device ifname enabled isolate mode ssid closed hidden network hspot
 	local encryption cipher key key1 key2 key3 key4 gtk_rekey
 	local macfilter macmode maclist wps wmf_bss_enable bss_max bss_enabled
 	local radius_server radius_port radius_secret net_reauth
@@ -383,7 +383,8 @@ vif_settings() {
 	config_get isolate $cfg isolate "0"
 	config_get mode $cfg mode "ap"
 	config_get ssid $cfg ssid ""
-	config_get closed $cfg closed "0"
+	config_get hidden $cfg hidden "0"
+	config_get closed $cfg closed "$hidden"
 	config_get encryption $cfg encryption "*DEL*"
 	config_get cipher $cfg cipher
 	config_get key_index "$vif" key_index "1"

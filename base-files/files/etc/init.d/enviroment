@@ -39,6 +39,7 @@ handle_configs()
 	local RMODEL=$(db get hw.board.routerModel)
 	local DESKEY=$(db get hw.board.desKey)
 	local IOPVER=$(db get hw.board.iopVersion)
+	local IOPHOSTNAME=${IOPVER//[!a-zA-Z0-9-]/-} # hostname as in RFC 1035
 
 	local oid=${BMAC:0:6}
 	local mac=$BMAC
@@ -70,6 +71,7 @@ handle_configs()
 			grep -q "\$OUI" /etc/config/$config && sed -i "s/\$OUI/$oid/g" /etc/config/$config
 			grep -q "\$HARDWAREID" /etc/config/$config && sed -i "s/\$HARDWAREID/$hardwareid/g" /etc/config/$config
 			grep -q "\$IOPVER" /etc/config/$config && sed -i "s/\$IOPVER/$IOPVER/g" /etc/config/$config
+			grep -q "\$IOPHOSTNAME" /etc/config/$config && sed -i "s/\$IOPHOSTNAME/$IOPHOSTNAME/g" /etc/config/$config
 			[ "$config" == "wireless" ] && grep -q "pskmixedpsk2" /etc/config/$config && sed -i "s/pskmixedpsk2/mixed-psk/g" /etc/config/$config
 		fi
 	done

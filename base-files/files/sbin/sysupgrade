@@ -457,11 +457,14 @@ for check in $sysupgrade_image_check; do
 			echo "Image check '$check' failed but --force given - will update anyway!"
 			break
 		else
+			ubus send "sysupgrade" "{\"status\":\"failed\", \"test\":\"$check\"}"
 			echo "Image check '$check' failed."
 			exit 1
 		fi
 	}
 done
+
+ubus send "sysupgrade" "{\"status\":\"success\"}"
 
 if [ -n "$CONF_IMAGE" ]; then
 	case "$(get_magic_word $CONF_IMAGE cat)" in

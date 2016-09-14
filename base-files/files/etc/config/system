@@ -16,6 +16,7 @@ config timeserver 'ntp'
 	list server     ntp1.gbg.netnod.se
 
 config upgrade
+	option fw_find_ext '.y2'
 
 config log 'watchdog'
         option enable '1'

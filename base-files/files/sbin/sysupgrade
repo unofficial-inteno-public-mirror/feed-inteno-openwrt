@@ -83,7 +83,7 @@ export ARGC="$#"
 find_image_on_usb() {
 	local image
 	local extension=$(uci -q get system.@upgrade[0].fw_find_ext)
-	extension=${extension:-.y}
+	extension=${extension:-.y2}
 
 	image=$(find /mnt/ -name "*$extension" | sed -E 's/.*-([0-9]{6})_.*/\0 \1/gi' | sort -k 2 | head -n1 | cut -d' ' -f1)
 	if [ -n "${image}" ]; then

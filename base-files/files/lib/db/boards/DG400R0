@@ -29,6 +29,11 @@ option sx9512_i2c_address 2b
 option sx9512_irq_pin 36
 option sx9512_active_capsense_channels 3f
 option sx9512_active_led_channels 00
+option sx9512_threshold_bl1 0a
+option sx9512_threshold_bl2 0a
+option sx9512_threshold_bl3 0a
+option sx9512_threshold_bl4 0a
+option sx9512_threshold_bl5 0a
 
 config pci_slot 'pci'
         option 43a0 AC

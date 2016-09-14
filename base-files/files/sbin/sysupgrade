@@ -464,7 +464,6 @@ for check in $sysupgrade_image_check; do
 	}
 done
 
-ubus send "sysupgrade" "{\"status\":\"success\"}"
 
 if [ -n "$CONF_IMAGE" ]; then
 	case "$(get_magic_word $CONF_IMAGE cat)" in
@@ -472,6 +471,7 @@ if [ -n "$CONF_IMAGE" ]; then
 		1f8b) ;;
 		*)
 			echo "Invalid config file. Please use only .tar.gz files"
+			ubus send "sysupgrade" "{\"status\":\"failed\", \"reason\":\"Invalid config file\"}"
 			exit 1
 		;;
 	esac
@@ -487,6 +487,7 @@ fi
 if [ $TEST -eq 1 ]; then
 	exit 0
 fi
+ubus send "sysupgrade" "{\"status\":\"success\"}"
 
 run_hooks "" $sysupgrade_pre_upgrade
 

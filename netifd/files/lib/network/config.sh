@@ -85,8 +85,8 @@ get_network_of() {
 		local iface="$2"
 		local net=
 		ifname="$(uci get network.$config.ifname)"
-		for if in $ifname; do
-			if [ "$if" == "$iface" ]; then
+		for ifc in $ifname; do
+			if [ "$ifc" == "$iface" ]; then
 				net=$config
 				break
 			fi
@@ -115,29 +115,53 @@ interfacename() {
 	local PORT_ORDER=$(db get hw.board.ethernetPortOrder)
 	local PORT_NAMES=$(db get hw.board.ethernetPortNames)
 	local cnt=1
-	local idx=0
+	local idx=1
 
 	# get index of interface name
 	for i in $PORT_ORDER; do
-	    if [ "$i" == "$1" ]; then
-		idx=$cnt
-	    fi
-	    cnt=$((cnt+1))
+		if [ "$i" == "$1" ]; then
+			break;
+		fi
+		idx=$((idx+1))
 	done
 
 	# get port name from index
-	cnt=1
 	for i in $PORT_NAMES; do
-	    if [ "$cnt" == "$idx" ]; then
-		echo $i
-	    fi
-	    cnt=$((cnt+1))
+		if [ "$cnt" == "$idx" ]; then
+			echo $i
+			break;
+		fi
+		cnt=$((cnt+1))
 	done
 
 	# for wifi use default
 	case "$1" in
-	    *wl*) echo "WLAN" ;;
+		*wl*) echo "WLAN" ;;
 	esac
+}
+
+fibername() {
+	local FIBER_ORDER=$(db get hw.board.fiberPortOrder)
+	local FIBER_NAMES=$(db get hw.board.fiberPortNames)
+	local cnt=1
+	local idx=1
+
+	# get index of interface name
+	for i in $FIBER_ORDER; do
+		if [ "$i" == "$1" ]; then
+			break;
+		fi
+		idx=$((idx+1))
+	done
+
+	# get port name from index
+	for i in $FIBER_NAMES; do
+		if [ "$cnt" == "$idx" ]; then
+			echo $i
+			break;
+		fi
+		cnt=$((cnt+1))
+	done
 }
 
 get_port_number() {
@@ -159,25 +183,25 @@ get_port_number() {
 # call example: wait_for_dns http://user:password@example.com/path/firmware.y2
 # waits for dnsmasq to start
 wait_for_dns() {
-        local url=$1
-        local wait_time=30
-        local wait_interval=2
+	local url=$1
+	local wait_time=30
+	local wait_interval=2
 
-        url=${url#*://}		# remove http://
-        url=${url%%/*}		# remove /path/firmware.y2
-        url=${url#*@}		# remove user:password@
-				# url is only example.com
+	url=${url#*://}		# remove http://
+	url=${url%%/*}		# remove /path/firmware.y2
+	url=${url#*@}		# remove user:password@
+			# url is only example.com
 
-        echo -n "Waiting for dns ..."
-        while [ true ] ; do
-                host -t a $url &> /dev/null # try DNS lookup for url
-                [ $? == 0 ] && break
-                sleep $wait_interval
-                echo -n "."
-                wait_time=$((wait_time - wait_interval))
-                [ "$wait_time" -le "0" ] && { echo " failed"; return 1;} # timer expired
-        done
-        echo " ok"
-        return 0
+	echo -n "Waiting for dns ..."
+	while [ true ] ; do
+		host -t a $url &> /dev/null # try DNS lookup for url
+		[ $? == 0 ] && break
+		sleep $wait_interval
+		echo -n "."
+		wait_time=$((wait_time - wait_interval))
+		[ "$wait_time" -le "0" ] && { echo " failed"; return 1;} # timer expired
+	done
+	echo " ok"
+	return 0
 }
 # end of wait_for_dns

@@ -660,6 +660,12 @@ start_service() {
 
 reload_service() {
 	rc_procd start_service "$@"
+
+	if [ -f /var/run/dnsmasq/dnsmasq.pid ]; then
+		pid=$(cat /var/run/dnsmasq/dnsmasq.pid)
+		kill -HUP $pid 2>/dev/null
+	fi
+
 	return 0
 }
 

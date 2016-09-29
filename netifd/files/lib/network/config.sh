@@ -166,15 +166,18 @@ fibername() {
 
 get_port_number() {
 	local ports="0 1 2 3 4 5 6 7 8"
+	local units="0 1"
 	local port="$1"
 	local ifname
 
-	for p in $ports; do
-		ifname="$(ethswctl getifname $p | awk '{print$NF}')"
-		if [ "$ifname" == "$port" ]; then
-			echo "$p"
-			break
-		fi
+	for unit in $units; do
+		for port in $ports; do
+			ifname="$(ethswctl getifname $port | awk '{print$NF}')"
+			if [ "$ifname" == "$port" ]; then
+				echo "$unit $port"
+				break
+			fi
+		done
 	done
 }
 

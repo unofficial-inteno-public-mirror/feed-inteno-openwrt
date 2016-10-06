@@ -1,0 +1,239 @@
+--- a/bridge.c
++++ b/bridge.c
+@@ -336,6 +336,9 @@ bridge_member_cb(struct device_user *dev, enum device_event ev)
+ 			 * in the kernel, apply the bridge settings in case the
+ 			 * bridge mtu is set
+ 			 */
++			D(DEBUG, "calling system_if_apply_settings dev %s s mtu %d os mtu %d dev %s s mtu %d os mtu %d\n",
++				bst->dev.ifname, bst->dev.settings.mtu, bst->dev.orig_settings.mtu,
++				dev->dev->ifname, dev->dev->settings.mtu, dev->dev->orig_settings.mtu);
+ 			system_if_apply_settings(&bst->dev, &bst->dev.settings,
+ 						 DEV_OPT_MTU | DEV_OPT_MTU6);
+ 		}
+--- a/device.c
++++ b/device.c
+@@ -73,6 +73,7 @@ void device_unlock(void)
+ 
+ static int set_device_state(struct device *dev, bool state)
+ {
++	D(DEBUG, "dev %s state %d\n", dev->ifname, state);
+ 	if (state) {
+ 		/* Get ifindex for all devices being enabled so a valid  */
+ 		/* ifindex is in place avoiding possible race conditions */
+@@ -95,6 +96,8 @@ simple_device_set_state(struct device *dev, bool state)
+ 	int ret = 0;
+ 
+ 	pdev = dev->parent.dev;
++	//D(DEBUG, "dev %s pdev %s state %d\n", dev->ifname, pdev->ifname, state);
++	D(DEBUG, "dev %s\n", dev->ifname);
+ 	if (state && !pdev) {
+ 		pdev = system_if_get_parent(dev);
+ 		if (pdev)
+@@ -110,6 +113,7 @@ simple_device_set_state(struct device *dev, bool state)
+ 		if (ret < 0)
+ 			return ret;
+ 	}
++	D(DEBUG, "calling set_device_state dev %s\n", dev->ifname);
+ 	return set_device_state(dev, state);
+ }
+ 
+--- a/interface.c
++++ b/interface.c
+@@ -354,8 +354,10 @@ interface_main_dev_cb(struct device_user *dep, enum device_event ev)
+ 		new_state = true;
+ 	case DEV_EVENT_REMOVE:
+ 		interface_set_available(iface, new_state);
+-		if (!new_state && dep->dev && dep->dev->external)
++		if (!new_state && dep->dev && dep->dev->external) {
++			D(DEBUG, "calling interface_set_main_dev");
+ 			interface_set_main_dev(iface, NULL);
++		}
+ 		break;
+ 	case DEV_EVENT_UP:
+ 		new_state = true;
+@@ -403,8 +405,10 @@ interface_set_available(struct interface *iface, bool new_state)
+ 	iface->available = new_state;
+ 
+ 	if (new_state) {
+-		if (iface->autostart && !config_init)
++		if (iface->autostart && !config_init) {
++			D(DEBUG, "interface_set_up starts for: name %s ifname %s\n", iface->name, iface->ifname);
+ 			interface_set_up(iface);
++		}
+ 	} else
+ 		__interface_set_down(iface, true);
+ }
+@@ -518,11 +522,13 @@ interface_alias_cb(struct interface_user *dep, struct interface *iface, enum int
+ 		if (!dev)
+ 			return;
+ 
++		D(DEBUG, "calling interface_set_main_dev");
+ 		interface_set_main_dev(alias, dev);
+ 		interface_set_available(alias, true);
+ 		break;
+ 	case IFEV_DOWN:
+ 		interface_set_available(alias, false);
++		D(DEBUG, "calling interface_set_main_dev");
+ 		interface_set_main_dev(alias, NULL);
+ 		break;
+ 	case IFEV_FREE:
+@@ -537,6 +543,9 @@ interface_alias_cb(struct interface_user *dep, struct interface *iface, enum int
+ static void
+ interface_set_device_config(struct interface *iface, struct device *dev)
+ {
++	D(DEBUG, "interface_set_device_config dev %s default_config %d\n",
++		dev ? dev->ifname : "null",
++		dev ? dev->default_config : -3);
+ 	if (!dev || !dev->default_config)
+ 		return;
+ 
+@@ -544,6 +553,7 @@ interface_set_device_config(struct interface *iface, struct device *dev)
+ 	    (!dev->iface_config || dev->config_iface != iface))
+ 		return;
+ 
++	D(DEBUG, "dev %s config_iface = name %s ifname %s\n", dev->ifname, iface->name, iface->ifname);
+ 	dev->config_iface = iface;
+ 	dev->iface_config = iface->device_config;
+ 	device_apply_config(dev, dev->type, iface->config);
+@@ -589,14 +599,17 @@ interface_claim_device(struct interface *iface)
+ 		for (i=0; i<devno; i++) {
+ 			dev = device_get(devname[i], true);
+ 			if (dev && dev->present) {
++				D(DEBUG, "calling interface_set_main_dev");
+ 				interface_set_main_dev(iface, dev);
+ 				break;
+ 			}
+ 		}
+ 		memset(ifnames, '\0', sizeof(ifnames));
+ 	}
+-	else if (dev)
++	else if (dev) {
++		D(DEBUG, "calling interface_set_main_dev");
+ 		interface_set_main_dev(iface, dev);
++	}
+ 
+ 	if (iface->proto_handler->flags & PROTO_FLAG_INIT_AVAILABLE)
+ 		interface_set_available(iface, true);
+@@ -611,6 +624,7 @@ interface_cleanup_state(struct interface *iface)
+ 	interface_clear_errors(iface);
+ 	interface_set_proto_state(iface, NULL);
+ 
++	D(DEBUG, "calling interface_set_main_dev");
+ 	interface_set_main_dev(iface, NULL);
+ 	interface_set_l3_dev(iface, NULL);
+ }
+@@ -670,8 +684,10 @@ interface_handle_config_change(struct interface *iface)
+ 		interface_do_free(iface);
+ 		return;
+ 	}
+-	if (iface->autostart && iface->available)
++	if (iface->autostart && iface->available) {
++		D(DEBUG, "interface_set_up starts for: name %s ifname %s\n", iface->name, iface->ifname);
+ 		interface_set_up(iface);
++	}
+ 	else if (iface->dynamic)
+ 		set_config_state(iface, IFC_REMOVE);
+ }
+@@ -927,6 +943,8 @@ interface_set_main_dev(struct interface *iface, struct device *dev)
+ 	if (iface->main_dev.dev == dev)
+ 		return;
+ 
++	D(DEBUG,"interface name %s ifname %s mtu %d setting main dev %s mtu %d %d claimed %d\n",
++		iface->ifname, iface->name, iface->mtu, dev->ifname, dev->settings.mtu, dev->orig_settings.mtu, claimed);
+ 	if (iface->mtu >= 68 && iface->mtu <=2048) {
+ 		dev->settings.mtu = iface->mtu;
+ 		dev->settings.flags |= DEV_OPT_MTU;
+@@ -964,6 +982,7 @@ interface_remove_link(struct interface *iface, struct device *dev)
+ 	if (dev != iface->main_dev.dev)
+ 		return UBUS_STATUS_INVALID_ARGUMENT;
+ 
++	D(DEBUG, "calling interface_set_main_dev");
+ 	interface_set_main_dev(iface, NULL);
+ 	return 0;
+ }
+@@ -989,6 +1008,7 @@ interface_add_link(struct interface *iface, struct device *dev, bool link_ext)
+ 	if (link_ext)
+ 		device_add_user(&iface->ext_dev, dev);
+ 
++	D(DEBUG, "calling interface_set_main_dev");
+ 	interface_set_main_dev(iface, dev);
+ 	iface->main_dev.hotplug = true;
+ 	return 0;
+@@ -1074,8 +1094,10 @@ interface_start_pending(void)
+ 	struct interface *iface;
+ 
+ 	vlist_for_each_element(&interfaces, iface, node) {
+-		if (iface->available && iface->autostart)
++		if (iface->available && iface->autostart) {
++			D(DEBUG, "interface_set_up starts for: name %s ifname %s\n", iface->name, iface->ifname);
+ 			interface_set_up(iface);
++		}
+ 	}
+ }
+ 
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -579,6 +579,10 @@ system_bridge_set_wireless(struct device *bridge, struct device *dev)
+ 	bool mcast_to_ucast = dev->wireless_ap;
+ 	bool hairpin = true;
+ 
++	D(DEBUG, "bridge %s s mtu %d os mtu %d device %s s mtu %d os mtu %d\n",
++		bridge->ifname, bridge->settings.mtu, bridge->orig_settings.mtu,
++		dev->ifname, dev->settings.mtu, dev->orig_settings.mtu);
++
+ 	if (bridge->settings.flags & DEV_OPT_MULTICAST_TO_UNICAST &&
+ 	    !bridge->settings.multicast_to_unicast)
+ 		mcast_to_ucast = false;
+@@ -596,6 +600,10 @@ int system_bridge_addif(struct device *bridge, struct device *dev)
+ 	char *oldbr;
+ 	int ret = 0;
+ 
++	D(DEBUG, "bridge %s s mtu %d os mtu %d device %s s mtu %d os mtu %d\n",
++		bridge->ifname, bridge->settings.mtu, bridge->orig_settings.mtu,
++		dev->ifname, dev->settings.mtu, dev->orig_settings.mtu);
++
+ 	oldbr = system_get_bridge(dev->ifname, dev_buf, sizeof(dev_buf));
+ 	if (!oldbr || strcmp(oldbr, bridge->ifname) != 0)
+ 		ret = system_bridge_if(bridge->ifname, dev, SIOCBRADDIF, NULL);
+@@ -1191,7 +1199,9 @@ system_if_apply_settings(struct device *dev, struct device_settings *s, unsigned
+ 
+ 	memset(&ifr, 0, sizeof(ifr));
+ 	strncpy(ifr.ifr_name, dev->ifname, sizeof(ifr.ifr_name));
++	D(DEBUG, "dev %8s sflags 0x%X & dev_opt_mtu 0x%X & apply_mask 0x%04X mtu %04d\n", dev->ifname, s->flags, DEV_OPT_MTU, apply_mask, s->mtu);
+ 	if (s->flags & DEV_OPT_MTU & apply_mask) {
++		D(DEBUG, "dev %8s \tIOCTL SET mtu %d\n", dev->ifname, s->mtu);
+ 		ifr.ifr_mtu = s->mtu;
+ 		if (ioctl(sock_ioctl, SIOCSIFMTU, &ifr) < 0)
+ 			s->flags &= ~DEV_OPT_MTU;
+@@ -1251,6 +1261,12 @@ int system_if_up(struct device *dev)
+ 	/* Only keep orig settings based on what needs to be set */
+ 	dev->orig_settings.valid_flags = dev->orig_settings.flags;
+ 	dev->orig_settings.flags &= dev->settings.flags;
++
++	D(DEBUG,"dev %s  s mtu %d flags %X\n", dev->ifname, dev->settings.mtu, dev->settings.flags);
++	D(DEBUG,"dev %s os mtu %d flags %X\n", dev->ifname, dev->orig_settings.mtu, dev->orig_settings.flags);
++	//D(DEBUG,"dev %s config_iface name %s ifname %s mtu %d\n", dev->ifname, dev->config_iface->name, dev->config_iface->ifname, dev->config_iface->mtu);
++	D(DEBUG,"dev %s config_iface ifname %X \n", dev->ifname, dev->config_iface);
++
+ 	system_if_apply_settings(dev, &dev->settings, dev->settings.flags);
+ 	if (system_if_is_uplink(dev))
+ 		system_if_flags(dev->ifname, IFF_MULTICAST, 0);
+@@ -1259,6 +1275,8 @@ int system_if_up(struct device *dev)
+ 
+ int system_if_down(struct device *dev)
+ {
++	D(DEBUG,"dev %s  s mtu %d flags %X\n", dev->ifname, dev->settings.mtu, dev->settings.flags);
++	D(DEBUG,"dev %s os mtu %d flags %X\n", dev->ifname, dev->orig_settings.mtu, dev->orig_settings.flags);
+ 	int ret = system_if_flags(dev->ifname, 0, IFF_UP);
+ 	system_if_apply_settings(dev, &dev->orig_settings, dev->orig_settings.flags);
+ 	return ret;
+--- a/ubus.c
++++ b/ubus.c
+@@ -687,6 +687,7 @@ netifd_dump_status(struct interface *iface)
+ 		if (iface->ip6table)
+ 			blobmsg_add_u32(&b, "ip6table", iface->ip6table);		  
+ 		blobmsg_add_u32(&b, "metric", iface->metric);
++		blobmsg_add_u32(&b, "mtu", iface->mtu);
+ 		blobmsg_add_u8(&b, "delegation", !iface->proto_ip.no_delegation);
+ 		a = blobmsg_open_array(&b, "ipv4-address");
+ 		interface_ip_dump_address_list(&iface->config_ip, false, true);

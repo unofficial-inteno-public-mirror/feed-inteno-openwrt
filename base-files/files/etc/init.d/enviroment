@@ -103,7 +103,7 @@ handle_openwrtversion() {
 	sed -i "s/.*DISTRIB_RELEASE.*/DISTRIB_RELEASE='$RELEASE'/g" /etc/openwrt_release
 	sed -i "s/.*DISTRIB_REVISION.*/DISTRIB_REVISION='$REVISION'/g" /etc/openwrt_release
 	sed -i "s/.*DISTRIB_DESCRIPTION.*/DISTRIB_DESCRIPTION='IOPSYS $REVISION $RELEASE'/g" /etc/openwrt_release
-	sed -i "s/.*DISTRIB_TARGET.*/DISTRIB_TARGET=$MODEL/g" /etc/openwrt_release
+	sed -i "s/.*DISTRIB_TARGET.*/DISTRIB_TARGET='$MODEL'/g" /etc/openwrt_release
 
 	sed -i "s/.*DEVICE_MANUFACTURER.*/DEVICE_MANUFACTURER='INTENO'/g" /etc/device_info
 	sed -i "s/.*DEVICE_PRODUCT.*/DEVICE_PRODUCT='$HARDWARE'/g" /etc/device_info

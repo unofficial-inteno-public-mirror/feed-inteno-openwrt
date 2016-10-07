@@ -1,3 +1,5 @@
+diff --git a/device.c b/device.c
+index 2a2030c..a64207a 100644
 --- a/device.c
 +++ b/device.c
 @@ -869,6 +869,8 @@ device_dump_status(struct blob_buf *b, struct device *dev)
@@ -10,7 +12,7 @@
  	blobmsg_add_u8(b, "present", dev->present);
  	blobmsg_add_string(b, "type", dev->type->name);
 diff --git a/interface.c b/interface.c
-index 8e8d889..5160cac 100644
+index 8e8d889..b80209d 100644
 --- a/interface.c
 +++ b/interface.c
 @@ -36,6 +36,7 @@ enum {
@@ -50,6 +52,14 @@ index 8e8d889..5160cac 100644
  	interface_set_available(iface, false);
  	device_add_user(&iface->main_dev, dev);
  	if (!dev) {
+@@ -1186,6 +1195,7 @@ interface_change_config(struct interface *if_old, struct interface *if_new)
+ 	interface_replace_dns(&if_old->config_ip, &if_new->config_ip);
+ 
+ 	UPDATE(metric, reload_ip);
++	UPDATE(mtu, reload_ip);
+ 	UPDATE(proto_ip.no_defaultroute, reload_ip);
+ 	UPDATE(ip4table, reload_ip);
+ 	UPDATE(ip6table, reload_ip);
 diff --git a/interface.h b/interface.h
 index d836c40..f939166 100644
 --- a/interface.h

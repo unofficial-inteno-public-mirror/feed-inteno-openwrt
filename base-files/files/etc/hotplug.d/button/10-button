@@ -92,7 +92,7 @@ wpscbutton_action () {
 			#ubus call uci commit "{\"config\":\"network\"}"
 			ubus call network reload
 			ifup "$(get_wifi_wet_info network)"
-			ubus call router reload
+			ubus call router.network reload
 			ubus call leds set  '{"state" : "normal"}'
 			return
 		fi
@@ -102,7 +102,7 @@ wpscbutton_action () {
 		cp -af /tmp/netmode_config_backup/* /etc/config/
 		rm -rf /tmp/netmode_config_backup
 		wifi reload
-		ubus call router reload
+		ubus call router.network reload
 	fi
 }
 

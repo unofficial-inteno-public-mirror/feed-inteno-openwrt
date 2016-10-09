@@ -355,10 +355,13 @@ get_image() { # <source> [ <command> ]
 	local conc="$2"
 	local cmd
 
-	local sysinfo=$(ubus call router quest "{ \"info\": \"system\" }")
+	local sysinfo=$(ubus call router.system info)
 	json_load "$sysinfo"
+	json_select system
 	json_get_var firmware firmware
 	json_get_var filesystem filesystem
+	json_select ..
+	json_cleanup
 
 	case "$from" in
 		http://*|ftp://*) cmd="wget -O- -q --user-agent=\"$firmware:$filesystem\"";;

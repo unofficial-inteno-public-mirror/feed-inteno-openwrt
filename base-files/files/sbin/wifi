@@ -1310,9 +1310,9 @@ case "$_ACTION" in
 	;;
 	clients)
 		if [ -n "$2" ]; then
-			ubus call router sta "{\"vif\":\"$2\"}"
+			ubus call router.wireless stas "{\"vif\":\"$2\"}"
 		else
-			ubus call router stas
+			ubus call router.wireless stas
 		fi
 		exit
 	;;
@@ -1352,4 +1352,4 @@ exec >/dev/null 2>&1
 configure_wifi
 
 # re-populate network in questd
-ubus -t 5 call router reload
+ubus -t 5 call router.network reload

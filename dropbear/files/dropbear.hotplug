@@ -2,6 +2,16 @@
 
 [ "$ACTION" = ifup ] || exit 0
 
+compare_dropbear_iface() {
+        local Interface
+
+        config_get Interface $1 Interface
+        if [ "$INTERFACE" == "$Interface" ]; then
+                /etc/init.d/dropbear reload
+                exit
+        fi
+}
+
 pidof dropbearkey >/dev/null && exit 0
-pidof dropbear >/dev/null || exit 0
-/etc/init.d/dropbear enabled && /etc/init.d/dropbear reload
+config_load dropbear
+config_foreach compare_dropbear_iface "dropbear" "$INTERFACE"

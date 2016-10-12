@@ -333,6 +333,27 @@ assign_network() {
 		_acnt=$((_acnt+1))
 	}
 
+	remove_from_networks() {
+		local iface=$1
+		local ifname=""
+		for net in $(uci show network | grep network.*.interface | awk -F'[.,=]' '{print$2}' | tr '\n' ' '); do
+			ifname=""
+			for ifc in $(uci -q get network.$net.ifname); do
+				if [ "$ifc" != "$iface" ]; then
+					ifname="$ifname $ifc"
+				fi
+			done
+			uci -q set network.$net.ifname="$(echo $ifname | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/[ \t]*$//')"
+			uci commit network
+		done
+		ifconfig $iface down
+	}
+
+	for vif in wl0 $(nvram get wl0_vifs) wl1 $(nvram get wl1_vifs); do
+		remove_from_networks $vif:q
+	done
+	ubus call network reload
+
 	config_load network
 	for vif in wl0 $(nvram get wl0_vifs) wl1 $(nvram get wl1_vifs); do
 		config_foreach find_wireless_device interface $vif
@@ -1351,5 +1372,6 @@ esac
 exec >/dev/null 2>&1
 configure_wifi
 
+#ubus call network reload
 # re-populate network in questd
 ubus -t 5 call router.network reload

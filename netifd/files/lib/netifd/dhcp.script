@@ -85,6 +85,8 @@ setup_interface () {
 		iup "{ \
 			'interface':'$INTERFACE', \
 			'privopt224':'$privopt224', \
+			'privopt225':'$privopt225', \
+			'privopt226':'$privopt226', \
 			'vendorspecinf':'$vendorspecinf', \
 			'httpurl128':'$httpurl128', \
 			'tftp':'$tftp', \

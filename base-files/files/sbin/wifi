@@ -25,7 +25,6 @@ remove_from_networks() {
 		uci -q set network.$net.ifname="$(echo $ifname | tr ' ' '\n' | sort -u | tr '\n' ' ' | sed 's/[ \t]*$//')"
 		uci commit network
 	done
-	ifconfig $iface down
 }
 
 add_to_network() {
@@ -45,7 +44,7 @@ add_to_network() {
 find_in_network() {
 	local wcfg=$1
 	local iface=$2
-	uci -q delete wireless.$wcfg.network
+	#uci -q delete wireless.$wcfg.network
 	for net in $(uci show network | grep network.*.interface | awk -F'[.,=]' '{print$2}' | tr '\n' ' '); do
 		for ifc in $(uci -q get network.$net.ifname); do
 			if [ "$ifc" == "$iface" ]; then
@@ -62,8 +61,6 @@ vif_settings() {
 	local key key1 key2 key3 key4
 
 	find_in_network $cfg $iface
-
-	remove_from_networks $iface
 
 	config_get device $cfg device
 	config_get ssid $cfg ssid ""
@@ -125,6 +122,7 @@ vif_settings() {
 	if [ "$disabled" == "0" ]; then
 		#config_get network $cfg network
 		network="$(uci -q get wireless.$cfg.network)"
+		network="${network:-lan}"
 		[ -n "$network" ] && add_to_network $network $iface
 	fi
 }
@@ -238,6 +236,24 @@ configure_wifi() {
 	uci commit wireless
 }
 
+bring_wifi() {
+	local action="$1"
+	[ -n "$action" ] || return
+	for rif in ra rai; do
+		for idx in 0 1 2 3; do
+			rxif="$rif$idx"
+			if uci show network | grep network.*ifname | tr -d "'" | grep -qw "$rxif"; then
+				if [ "$action" == "up" ]; then
+					ifconfig $rxif up
+				else
+					remove_from_networks $rxif
+					ifconfig $rxif down
+				fi
+			fi
+		done
+	done
+}
+
 case "$_ACTION" in
 	detect)
 		exit
@@ -271,20 +287,9 @@ case "$_ACTION" in
 	;;
 esac
 
-#for idx in 0 1 2 3; do
-#	remove_from_networks ra$idx
-#	remove_from_networks rai$idx
-#done
-
+bring_wifi down
 configure_wifi
-
-for idx in 0 1 2 3; do
-	uci show network | grep network.*ifname | tr -d "'" | grep -qw "ra$idx$" && ifconfig ra$idx up
-done
-
-for idx in 0 1 2 3; do
-	uci show network | grep network.*ifname | tr -d "'" | grep -qw "rai$idx$" && ifconfig rai$idx up
-done
+bring_wifi up
 
 # trigger network reload
 ubus -t 5 call network reload

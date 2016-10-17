@@ -90,7 +90,7 @@ generate_network() {
 		static)
 			local ipad
 			case "$1" in
-				lan) ipad=${ipaddr:-"192.168.1.1"} ;;
+				lan) ipad=${ipaddr:-"192.168.1.1"}; is_lan="1" ;;
 				*) ipad=${ipaddr:-"192.168.$((addr_offset++)).1"} ;;
 			esac
 
@@ -98,6 +98,7 @@ generate_network() {
 
 			uci -q batch <<-EOF
 				set network.$1.proto='static'
+				set network.$1.is_lan=$is_lan
 				set network.$1.ipaddr='$ipad'
 				set network.$1.netmask='$netm'
 				set network.$1.ip6assign='60'
@@ -106,7 +107,7 @@ generate_network() {
 
 		dhcp)
 			# fixup IPv6 slave interface if parent is a bridge
-			[ "$type" = "bridge" ] && ifname="br-$1"
+			[ "$type" = "bridge" ] && ifname="br-$1" || ifname="@wan"
 
 			uci -q batch <<-EOF
 				set network.$1.proto='dhcp'

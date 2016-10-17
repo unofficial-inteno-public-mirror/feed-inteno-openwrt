@@ -5,28 +5,30 @@ config wifi-status 'status'
 	option schedule '0'
 
 config wifi-device  ra0
-        option channel  1
-        option hwmode   11n
-        option htmode   HT20
-        option country 'DE'
+	option band b
+	option channel  1
+	option hwmode   11n
+	option htmode   HT20
+	option country 'DE'
 
 config wifi-iface
-        option device   ra0
-        option network  lan
-        option mode     ap
-        option ssid     OpenWrt
-        option encryption none
+	option device   ra0
+	option network  lan
+	option mode     ap
+	option ssid     OpenWrt
+	option encryption none
 
 config wifi-device  rai0
-        option channel  36
-        option hwmode   11ac
-        option htmode   HT20
-        option country 'DE'
+	option band a
+	option channel  36
+	option hwmode   11ac
+	option htmode   HT20
+	option country 'DE'
 
 config wifi-iface
-        option device   rai0
-        option network  lan
-        option mode     ap
-        option ssid     OpenWrt-5G
-        option encryption none
+	option device   rai0
+	option network  lan
+	option mode     ap
+	option ssid     OpenWrt-5G
+	option encryption none
 

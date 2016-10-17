@@ -96,6 +96,8 @@ vif_settings() {
 		;;
 	esac
 
+	VNO=$((_VIFNUM + 1 ))
+
 	case "$iface" in
 		rai*)
 			CONFILE=$RAI
@@ -104,8 +106,6 @@ vif_settings() {
 			CONFILE=$RA
 		;;
 	esac
-
-	VNO=$((_VIFNUM + 1 ))
 
 	sed -i "s/AuthMode=.*/AuthMode=$authmode/g" $CONFILE
 	sed -i "s/EncrypType=.*/EncrypType=$encrtype/g" $CONFILE
@@ -126,8 +126,6 @@ vif_settings() {
 		#config_get network $cfg network
 		network="$(uci -q get wireless.$cfg.network)"
 		[ -n "$network" ] && add_to_network $network $iface
-
-		ifconfig $iface up
 	fi
 }
 
@@ -157,8 +155,8 @@ configure_vif() {
 wdev_settings() {
 	local cfg=$1
 	local device=$cfg
-	local country channel radio country_code disabled dfsc
-	local beamforming dfsc isac
+	local country channel radio country_code disabled
+	local dfsc beamforming dfsc isac autoch
 
 	case "$device" in
 		rai*)
@@ -178,6 +176,7 @@ wdev_settings() {
 	config_get country $cfg country "SV"
 	config_get hwmode $cfg hwmode "auto"
 	config_get channel $cfg channel "auto"
+	[ "$channel" == "auto" ] && autoch=1 || autoch=0
 	config_get dfsc $cfg dfsc "$isac"
 	config_get beamforming $cfg beamforming "0"
 
@@ -187,7 +186,7 @@ wdev_settings() {
 
 	case $hwmode in
 		11ac)
-			wirelessmode=13
+			wirelessmode=15
 		;;
 		11n)
 			wirelessmode=6
@@ -205,16 +204,18 @@ wdev_settings() {
 			wirelessmode=1
 		;;
 		*)
-			wirelessmode=13
+			wirelessmode=15
 		;;
 	esac
 
+	sed -i "s/BssidNum=.*/BssidNum=4/g" $CONFILE
 	sed -i "s/CountryRegion=.*/CountryRegion=1/g" $CONFILE
 	sed -i "s/CountryRegionABand=.*/CountryRegionABand=1/g" $CONFILE
 
 	sed -i "s/CountryCode=.*/CountryCode=$country_code/g" $CONFILE
 	sed -i "s/RadioOn=.*/RadioOn=$radio/g" $CONFILE
 	sed -i "s/Channel=.*/Channel=$channel/g" $CONFILE
+	sed -i "s/AutoChannelSelect=.*/AutoChannelSelect=$autoch/g" $CONFILE
 	sed -i "s/WirelessMode=.*/WirelessMode=$wirelessmode/g" $CONFILE
 	sed -i "s/DfsEnable=.*/DfsEnable=$dfsc/g" $CONFILE
 	sed -i "s/ITxBfEn=.*/ITxBfEn=$beamforming/g" $CONFILE
@@ -276,6 +277,14 @@ esac
 #done
 
 configure_wifi
+
+for idx in 0 1 2 3; do
+	uci show network | grep network.*ifname | tr -d "'" | grep -qw "ra$idx$" && ifconfig ra$idx up
+done
+
+for idx in 0 1 2 3; do
+	uci show network | grep network.*ifname | tr -d "'" | grep -qw "rai$idx$" && ifconfig rai$idx up
+done
 
 # trigger network reload
 ubus -t 5 call network reload

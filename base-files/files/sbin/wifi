@@ -154,16 +154,18 @@ wdev_settings() {
 	local cfg=$1
 	local device=$cfg
 	local country channel radio country_code disabled
-	local dfsc beamforming dfsc isac autoch
+	local dfsc beamforming dfsc isac autoch autochskplist
 
 	case "$device" in
 		rai*)
 			CONFILE=$RAI
 			isac=1
+			autochskplist="52;56;60;64;100;104;108;112;116;120;124;128;132;136;140"
 		;;
 		ra*)
 			CONFILE=$RA
 			isac=0
+			autochskplist=""
 		;;
 	esac
 
@@ -175,8 +177,10 @@ wdev_settings() {
 	config_get hwmode $cfg hwmode "auto"
 	config_get channel $cfg channel "auto"
 	[ "$channel" == "auto" ] && autoch=1 || autoch=0
-	config_get dfsc $cfg dfsc "$isac"
+	config_get dfsc $cfg dfsc "$is_ac"
+	[ "$dfsc" == "1" ] && autochskplist=""
 	config_get beamforming $cfg beamforming "0"
+
 
 	country_code=$(echo $country | awk -F'/' '{print$1}')
 	country_rev=$(echo $country | awk -F'/' '{print$2}')
@@ -214,8 +218,9 @@ wdev_settings() {
 	sed -i "s/RadioOn=.*/RadioOn=$radio/g" $CONFILE
 	sed -i "s/Channel=.*/Channel=$channel/g" $CONFILE
 	sed -i "s/AutoChannelSelect=.*/AutoChannelSelect=$autoch/g" $CONFILE
+	sed -i "s/AutoChannelSkipList=.*/AutoChannelSkipList=$autochskplist/g" $CONFILE
 	sed -i "s/WirelessMode=.*/WirelessMode=$wirelessmode/g" $CONFILE
-	sed -i "s/DfsEnable=.*/DfsEnable=$dfsc/g" $CONFILE
+	sed -i "s/DfsEnable=.*/DfsEnable=$isac/g" $CONFILE
 	sed -i "s/ITxBfEn=.*/ITxBfEn=$beamforming/g" $CONFILE
 }
 

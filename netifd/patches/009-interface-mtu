@@ -1,0 +1,77 @@
+diff --git a/device.c b/device.c
+index 2a2030c..54252c1 100644
+--- a/device.c
++++ b/device.c
+@@ -869,6 +869,9 @@ device_dump_status(struct blob_buf *b, struct device *dev)
+ 		return;
+ 	}
+ 
++	if (strstr(dev->ifname, "wl") != dev->ifname)
++		system_if_get_settings(dev, &dev->settings);
++
+ 	blobmsg_add_u8(b, "external", dev->external);
+ 	blobmsg_add_u8(b, "present", dev->present);
+ 	blobmsg_add_string(b, "type", dev->type->name);
+diff --git a/interface.c b/interface.c
+index 8e8d889..2be2838 100644
+--- a/interface.c
++++ b/interface.c
+@@ -36,6 +36,7 @@ enum {
+ 	IFACE_ATTR_DNS,
+ 	IFACE_ATTR_DNS_SEARCH,
+ 	IFACE_ATTR_METRIC,
++	IFACE_ATTR_MTU,
+ 	IFACE_ATTR_INTERFACE,
+ 	IFACE_ATTR_IP6ASSIGN,
+ 	IFACE_ATTR_IP6HINT,
+@@ -55,6 +56,7 @@ static const struct blobmsg_policy iface_attrs[IFACE_ATTR_MAX] = {
+ 	[IFACE_ATTR_DEFAULTROUTE] = { .name = "defaultroute", .type = BLOBMSG_TYPE_BOOL },
+ 	[IFACE_ATTR_PEERDNS] = { .name = "peerdns", .type = BLOBMSG_TYPE_BOOL },
+ 	[IFACE_ATTR_METRIC] = { .name = "metric", .type = BLOBMSG_TYPE_INT32 },
++	[IFACE_ATTR_MTU] = { .name = "mtu", .type = BLOBMSG_TYPE_INT32 },
+ 	[IFACE_ATTR_DNS] = { .name = "dns", .type = BLOBMSG_TYPE_ARRAY },
+ 	[IFACE_ATTR_DNS_SEARCH] = { .name = "dns_search", .type = BLOBMSG_TYPE_ARRAY },
+ 	[IFACE_ATTR_INTERFACE] = { .name = "interface", .type = BLOBMSG_TYPE_STRING },
+@@ -789,6 +791,9 @@ interface_alloc(const char *name, struct blob_attr *config)
+ 	if ((cur = tb[IFACE_ATTR_METRIC]))
+ 		iface->metric = blobmsg_get_u32(cur);
+ 
++	if ((cur = tb[IFACE_ATTR_MTU]))
++		iface->mtu = blobmsg_get_u32(cur);
++
+ 	if ((cur = tb[IFACE_ATTR_IP6ASSIGN]))
+ 		iface->assignment_length = blobmsg_get_u32(cur);
+ 
+@@ -922,6 +927,12 @@ interface_set_main_dev(struct interface *iface, struct device *dev)
+ 	if (iface->main_dev.dev == dev)
+ 		return;
+ 
++	if (iface->mtu >= 68 && iface->mtu <=2048) {
++		if (strstr(dev->ifname, "wl") != dev->ifname) {
++			dev->settings.mtu = iface->mtu;
++			dev->settings.flags |= DEV_OPT_MTU;
++		}
++	}
+ 	interface_set_available(iface, false);
+ 	device_add_user(&iface->main_dev, dev);
+ 	if (!dev) {
+@@ -1186,6 +1197,7 @@ interface_change_config(struct interface *if_old, struct interface *if_new)
+ 	interface_replace_dns(&if_old->config_ip, &if_new->config_ip);
+ 
+ 	UPDATE(metric, reload_ip);
++	UPDATE(mtu, reload_ip);
+ 	UPDATE(proto_ip.no_defaultroute, reload_ip);
+ 	UPDATE(ip4table, reload_ip);
+ 	UPDATE(ip6table, reload_ip);
+diff --git a/interface.h b/interface.h
+index d836c40..f939166 100644
+--- a/interface.h
++++ b/interface.h
+@@ -143,6 +143,7 @@ struct interface {
+ 	struct vlist_tree host_routes;
+ 
+ 	int metric;
++	int mtu;
+ 	unsigned int ip4table;
+ 	unsigned int ip6table;
+ 

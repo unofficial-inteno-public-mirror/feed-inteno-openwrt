@@ -1,0 +1,19 @@
+--- a/bridge.c
++++ b/bridge.c
+@@ -153,6 +153,8 @@ bridge_reset_primary(struct bridge_state *bst)
+ 					continue;
+ 		}
+ 
++		system_if_get_settings(bm->dev.dev, &bm->dev.dev->settings);
++
+ 		bst->primary_port = bm;
+ 		if (bm->dev.dev->settings.flags & DEV_OPT_MACADDR)
+ 			macaddr = bm->dev.dev->settings.macaddr;
+@@ -685,6 +687,7 @@ bridge_reload(struct device *dev, struct blob_attr *attr)
+ 
+ 	free(bst->config_data);
+ 	bst->config_data = attr;
++	bridge_reset_primary(bst);
+ 	return ret;
+ }
+ 

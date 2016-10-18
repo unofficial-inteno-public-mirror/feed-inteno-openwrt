@@ -29,8 +29,14 @@ get_new_ip() {
 
 if [ "$islan" != "1" ] && [ "$proto" != "none" ]; then
 	network_get_ipaddr wanip $INTERFACE
+	[ -n "$wanip" ] || exit
 
-	[ -n "$wanip" ] && net=$(netcheck -h $wanip -n)
+	local lanip
+	network_get_ipaddr lanip lan
+	[ -n "$lanip" ] || exit
+
+	[ "${wanip%.*}" == "${lanip%.*}" ] || exit
+	net="lan"
 
 	if [ -n "$net" ]; then
 		netip="$(uci -q get network.$net.ipaddr)"

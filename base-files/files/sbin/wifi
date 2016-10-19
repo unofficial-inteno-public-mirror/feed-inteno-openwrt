@@ -179,7 +179,7 @@ wdev_settings() {
 	[ "$channel" == "auto" ] && autoch=1 || autoch=0
 	config_get dfsc $cfg dfsc "$is_ac"
 	[ "$dfsc" == "1" ] && autochskplist=""
-	config_get beamforming $cfg beamforming "0"
+	config_get beamforming $cfg beamforming "1"
 
 
 	country_code=$(echo $country | awk -F'/' '{print$1}')

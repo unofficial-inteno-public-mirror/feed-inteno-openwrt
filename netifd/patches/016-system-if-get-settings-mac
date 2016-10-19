@@ -1,0 +1,50 @@
+diff --git a/bridge.c b/bridge.c
+index 49b37e3..12072c2 100644
+--- a/bridge.c
++++ b/bridge.c
+@@ -153,7 +153,7 @@ bridge_reset_primary(struct bridge_state *bst)
+ 					continue;
+ 		}
+ 
+-		system_if_get_settings(bm->dev.dev, &bm->dev.dev->settings);
++		system_if_get_settings_mac(bm->dev.dev, &bm->dev.dev->settings);
+ 
+ 		bst->primary_port = bm;
+ 		if (bm->dev.dev->settings.flags & DEV_OPT_MACADDR)
+diff --git a/system-linux.c b/system-linux.c
+index ccf3b27..d8a2344 100644
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -1151,6 +1151,20 @@ system_if_get_settings(struct device *dev, struct device_settings *s)
+ 	}
+ }
+ 
++void
++system_if_get_settings_mac(struct device *dev, struct device_settings *s)
++{
++	struct ifreq ifr;
++
++	memset(&ifr, 0, sizeof(ifr));
++	strncpy(ifr.ifr_name, dev->ifname, sizeof(ifr.ifr_name));
++
++	if (ioctl(sock_ioctl, SIOCGIFHWADDR, &ifr) == 0) {
++		memcpy(s->macaddr, &ifr.ifr_hwaddr.sa_data, sizeof(s->macaddr));
++		s->flags |= DEV_OPT_MACADDR;
++	}
++}
++
+ static void
+ system_if_set_rps_xps_val(const char *path, int val)
+ {
+diff --git a/system.h b/system.h
+index dc9ff01..f9ad294 100644
+--- a/system.h
++++ b/system.h
+@@ -115,6 +115,7 @@ int system_vlandev_add(struct device *vlandev, struct device *dev, struct vlande
+ int system_vlandev_del(struct device *vlandev);
+ 
+ void system_if_get_settings(struct device *dev, struct device_settings *s);
++void system_if_get_settings_mac(struct device *dev, struct device_settings *s);
+ void system_if_clear_state(struct device *dev);
+ int system_if_up(struct device *dev);
+ int system_if_down(struct device *dev);

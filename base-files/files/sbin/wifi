@@ -340,7 +340,7 @@ assign_network() {
 	config_foreach tag_network interface
 	uci commit network
 	uci commit wireless
-	ubus call network reload
+	ubus -t 5 call network reload
 }
 
 wps_settings() {
@@ -1352,4 +1352,4 @@ exec >/dev/null 2>&1
 configure_wifi
 
 # re-populate network in questd
-ubus -t 5 call router.network reload
+ubus -t 15 call router.network reload

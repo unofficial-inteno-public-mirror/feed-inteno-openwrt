@@ -259,6 +259,26 @@ bring_wifi() {
 	done
 }
 
+convert_macros() {
+	local BMAC=$(fw_printenv  | grep 'ethaddr=' | cut -d'=' -f2 | tr -d ':')
+	local MAC=$(printf "%X\n" $((0x$BMAC)))
+	local BSSID=$(printf "%X\n" $((0x$BMAC + 2)))
+	local WPAKEY="00000000"
+
+	local bssid=$BSSID
+	local bssid2=$(echo -n $BSSID | tail -c 2)
+	local bssid4=$(echo -n $BSSID | tail -c 4)
+	local bssid6=$(echo -n $BSSID | tail -c 6)
+	local wpakey="${WPAKEY:-1234567890}"
+
+
+	grep -q "\$BSSID6" /etc/config/wireless && sed -i "s/\$BSSID6/$bssid6/g" /etc/config/wireless
+	grep -q "\$BSSID4" /etc/config/wireless && sed -i "s/\$BSSID4/$bssid4/g" /etc/config/wireless
+	grep -q "\$BSSID2" /etc/config/wireless && sed -i "s/\$BSSID2/$bssid2/g" /etc/config/wireless
+	grep -q "\$BSSID" /etc/config/wireless && sed -i "s/\$BSSID/$bssid/g" /etc/config/wireless
+	grep -q "\$WPAKEY" /etc/config/wireless && sed -i "s/\$WPAKEY/$wpakey/g" /etc/config/wireless
+}
+
 case "$_ACTION" in
 	detect)
 		exit
@@ -292,6 +312,7 @@ case "$_ACTION" in
 	;;
 esac
 
+convert_macros
 bring_wifi down
 configure_wifi
 bring_wifi up

@@ -15,8 +15,9 @@ config wifi-iface
 	option device   ra0
 	option network  lan
 	option mode     ap
-	option ssid     OpenWrt
-	option encryption none
+	option ssid     Inteno-$BSSID4
+	option encryption psk2
+	option key	$WPAKEY
 
 config wifi-device  rai0
 	option band a
@@ -29,6 +30,7 @@ config wifi-iface
 	option device   rai0
 	option network  lan
 	option mode     ap
-	option ssid     OpenWrt-5G
-	option encryption none
+	option ssid     Inteno-$BSSID4-5G
+	option encryption psk2
+	option key	$WPAKEY
 

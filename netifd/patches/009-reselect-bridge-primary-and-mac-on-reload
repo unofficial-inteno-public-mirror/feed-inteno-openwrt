@@ -1,0 +1,52 @@
+--- a/bridge.c
++++ b/bridge.c
+@@ -153,6 +153,8 @@ bridge_reset_primary(struct bridge_state *bst)
+ 					continue;
+ 		}
+ 
++		system_if_get_settings_mac(bm->dev.dev, &bm->dev.dev->settings);
++
+ 		bst->primary_port = bm;
+ 		if (bm->dev.dev->settings.flags & DEV_OPT_MACADDR)
+ 			macaddr = bm->dev.dev->settings.macaddr;
+@@ -682,6 +684,7 @@ bridge_reload(struct device *dev, struct blob_attr *attr)
+ 
+ 	free(bst->config_data);
+ 	bst->config_data = attr;
++	bridge_reset_primary(bst);
+ 	return ret;
+ }
+ 
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -1151,6 +1151,20 @@ system_if_get_settings(struct device *dev, struct device_settings *s)
+ 	}
+ }
+ 
++void
++system_if_get_settings_mac(struct device *dev, struct device_settings *s)
++{
++	struct ifreq ifr;
++
++	memset(&ifr, 0, sizeof(ifr));
++	strncpy(ifr.ifr_name, dev->ifname, sizeof(ifr.ifr_name));
++
++	if (ioctl(sock_ioctl, SIOCGIFHWADDR, &ifr) == 0) {
++		memcpy(s->macaddr, &ifr.ifr_hwaddr.sa_data, sizeof(s->macaddr));
++		s->flags |= DEV_OPT_MACADDR;
++	}
++}
++
+ static void
+ system_if_set_rps_xps_val(const char *path, int val)
+ {
+--- a/system.h
++++ b/system.h
+@@ -115,6 +115,7 @@ int system_vlandev_add(struct device *vlandev, struct device *dev, struct vlande
+ int system_vlandev_del(struct device *vlandev);
+ 
+ void system_if_get_settings(struct device *dev, struct device_settings *s);
++void system_if_get_settings_mac(struct device *dev, struct device_settings *s);
+ void system_if_clear_state(struct device *dev);
+ int system_if_up(struct device *dev);
+ int system_if_down(struct device *dev);

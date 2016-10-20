@@ -1,0 +1,13 @@
+#!/bin/sh
+
+uci -q get firewall.settings >/dev/null || {
+
+uci -q batch <<-EOT
+	add firewall settings
+	rename firewall.@settings[-1]=settings
+	set firewall.settings.disabled=0
+	commit firewall
+EOT
+
+}
+

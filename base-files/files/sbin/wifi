@@ -1352,4 +1352,4 @@ exec >/dev/null 2>&1
 configure_wifi
 
 # re-populate network in questd
-ubus -t 15 call router.network reload
+ubus -t 20 call router.network reload

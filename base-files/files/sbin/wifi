@@ -155,7 +155,7 @@ wdev_settings() {
 	local device=$cfg
 	local country channel radio country_code disabled
 	local dfsc beamforming dfsc isac autoch autochskplist
-	local maxassoc
+	local maxassoc bandwidth bwdef htbw vhtbw
 
 	case "$device" in
 		rai*)
@@ -182,6 +182,22 @@ wdev_settings() {
 	[ "$dfsc" == "1" ] && autochskplist=""
 	config_get beamforming $cfg beamforming "1"
 	config_get maxassoc $cfg maxassoc "32"
+
+	[ "$is_ac" == "1" ] && bwdef="80" || bwdef="20"
+	config_get bandwidth $cfg bandwidth "$bwdef"
+
+	htbw=0
+	vhtbw=0
+	case "$bandwidth" in
+		80)
+			htbw=1
+			[ "$is_ac" == "1" ] && vhtbw=1
+		;;
+		40)
+			htbw=1
+			vhtbw=0
+		;;
+	esac
 
 	country_code=$(echo $country | awk -F'/' '{print$1}')
 	country_rev=$(echo $country | awk -F'/' '{print$2}')
@@ -224,6 +240,8 @@ wdev_settings() {
 	sed -i "s/DfsEnable=.*/DfsEnable=$isac/g" $CONFILE
 	sed -i "s/ITxBfEn=.*/ITxBfEn=$beamforming/g" $CONFILE
 	sed -i "s/MaxStaNum=.*/MaxStaNum=$maxassoc/g" $CONFILE
+	sed -i "s/HT_BW=.*/HT_BW=$htbw/g" $CONFILE
+	sed -i "s/VHT_BW=.*/VHT_BW=$vhtbw/g" $CONFILE
 }
 
 setup_wifi_device() {

@@ -198,7 +198,7 @@ wait_for_dns() {
 
 	echo -n "Waiting for dns ..."
 	while [ true ] ; do
-		host -t a $url &> /dev/null # try DNS lookup for url
+		nslookup $url &> /dev/null # try DNS lookup for url
 		[ $? == 0 ] && break
 		sleep $wait_interval
 		echo -n "."

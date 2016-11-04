@@ -1,38 +1,39 @@
 --- a/bridge.c
 +++ b/bridge.c
-@@ -111,6 +111,7 @@ static void
+@@ -111,28 +111,63 @@ static void
  bridge_reset_primary(struct bridge_state *bst)
  {
  	struct bridge_member *bm;
-+	uint8_t macaddr_old[6];
++	struct bridge_member *primary = NULL;
++	struct device *dev = NULL, *pdev = NULL;
++	uint8_t *macaddr;
  
  	if (!bst->primary_port &&
  	    (bst->dev.settings.flags & DEV_OPT_MACADDR))
-@@ -118,12 +119,40 @@ bridge_reset_primary(struct bridge_state *bst)
+ 		return;
  
- 	bst->primary_port = NULL;
+-	bst->primary_port = NULL;
  	bst->dev.settings.flags &= ~DEV_OPT_MACADDR;
-+	memcpy(macaddr_old, bst->dev.settings.macaddr, 6);
- 	vlist_for_each_element(&bst->members, bm, node) {
- 		uint8_t *macaddr;
+-	vlist_for_each_element(&bst->members, bm, node) {
+-		uint8_t *macaddr;
  
++	vlist_for_each_element(&bst->members, bm, node) {
  		if (!bm->present)
  			continue;
++		dev = bm->dev.dev;
  
-+		/*
-+		 * If 2 or more uplinks are in the bridge,
-+		 * ensure that the selection of the primary_port is consistent
-+		 * between process restarts for the same set of bridge members.
-+		 * Choose a primary device type based on priority, i.e.:
-+		 *	ptmX.X, atmX.X ,ethX.X, wlX
-+		 * Choose a primary device number in alphabetical order, e.g.:
-+		 *	eth0.1, eth1.1.
-+		 */
-+
-+		if (bst->primary_port) {
+-		bst->primary_port = bm;
+-		if (bm->dev.dev->settings.flags & DEV_OPT_MACADDR)
+-			macaddr = bm->dev.dev->settings.macaddr;
+-		else
+-			macaddr = bm->dev.dev->orig_settings.macaddr;
+-		memcpy(bst->dev.settings.macaddr, macaddr, 6);
+-		bst->dev.settings.flags |= DEV_OPT_MACADDR;
+-		return;
++		if (primary) {
 +			/* a candidate has been selected for primary_port */
-+			int primary_uplink = system_if_is_uplink(bst->primary_port->dev.dev);
-+			int member_uplink = system_if_is_uplink(bm->dev.dev);
++			int primary_uplink = system_if_is_uplink(pdev);
++			int member_uplink = system_if_is_uplink(dev);
 +			if (!member_uplink)
 +				/* bm is not an uplink */
 +				continue;
@@ -41,25 +42,32 @@
 +				continue;
 +			if (primary_uplink == member_uplink)
 +				/* both are uplinks, same type */
-+				if (strcmp(bst->primary_port->dev.dev->ifname, bm->dev.dev->ifname) < 0)
++				if (strcmp(pdev->ifname, dev->ifname) < 0)
 +					/* Choose in alphabetical order */
 +					continue;
 +		}
 +
- 		bst->primary_port = bm;
- 		if (bm->dev.dev->settings.flags & DEV_OPT_MACADDR)
- 			macaddr = bm->dev.dev->settings.macaddr;
-@@ -131,8 +160,16 @@ bridge_reset_primary(struct bridge_state *bst)
- 			macaddr = bm->dev.dev->orig_settings.macaddr;
- 		memcpy(bst->dev.settings.macaddr, macaddr, 6);
- 		bst->dev.settings.flags |= DEV_OPT_MACADDR;
--		return;
++		primary = bm;
++		pdev = dev;
  	}
 +
++	if (!primary || !pdev)
++		return;
++
++	if (pdev->settings.flags & DEV_OPT_MACADDR)
++		macaddr = pdev->settings.macaddr;
++	else
++		macaddr = pdev->orig_settings.macaddr;
++
 +	for (int i = 0; i < 6; i++)
-+		if (bst->dev.settings.macaddr[i] != macaddr_old[i]) {
++		if (bst->dev.settings.macaddr[i] != macaddr[i]) {
 +			/* macaddr has changed */
++			bst->primary_port = primary;
++			memcpy(bst->dev.settings.macaddr, macaddr, 6);
++			bst->dev.settings.flags |= DEV_OPT_MACADDR;
++
 +			system_if_apply_settings(&bst->dev, &bst->dev.settings, DEV_OPT_MACADDR);
++
 +			netifd_log_message(L_NOTICE, "%s MAC address set to %s (based on bridge member %s)",
 +					bst->dev.ifname, format_macaddr(bst->dev.settings.macaddr), bst->primary_port->name);
 +			return;
@@ -67,7 +75,7 @@
  }
  
  static int
-@@ -207,6 +244,7 @@ bridge_enable_member(struct bridge_member *bm)
+@@ -207,6 +242,7 @@ bridge_enable_member(struct bridge_member *bm)
  	}
  
  	device_set_present(&bst->dev, true);
@@ -75,7 +83,7 @@
  	device_broadcast_event(&bst->dev, DEV_EVENT_TOPO_CHANGE);
  
  	return 0;
-@@ -360,7 +398,6 @@ bridge_set_up(struct bridge_state *bst)
+@@ -360,7 +396,6 @@ bridge_set_up(struct bridge_state *bst)
  		return -ENOENT;
  	}
  
@@ -83,7 +91,7 @@
  	ret = bst->set_state(&bst->dev, true);
  	if (ret < 0)
  		bridge_set_down(bst);
-@@ -403,6 +440,8 @@ bridge_create_member(struct bridge_state *bst, struct device *dev, bool hotplug)
+@@ -403,6 +438,8 @@ bridge_create_member(struct bridge_state *bst, struct device *dev, bool hotplug)
  	if (hotplug && bm)
  		bm->node.version = -1;
  

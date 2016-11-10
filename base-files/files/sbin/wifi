@@ -958,6 +958,7 @@ configure_wifi() {
 	nvram set acs_ifnames="$_ACSIFS"
 	wlmngr_startServices
 	wlmngr_startWsc
+	wlmngr_BSDCtrl
 
 	nvram set wlmngr="done"
 

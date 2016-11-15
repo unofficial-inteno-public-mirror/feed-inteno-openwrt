@@ -4,7 +4,7 @@ local ifc6=$(uci -q show network | grep proto=.*dhcpv6.* | head -1 | cut -d'.' -
 
 [ -n "$ifc6" ] || exit 0
 
-[ ifupdate = "$ACTION" ] && {
+[ ifup = "$ACTION" || ifupdate = "$ACTION" ] && {
         case "$INTERFACE" in
                 "$ifc6")
                         local up device nexthop metric valid

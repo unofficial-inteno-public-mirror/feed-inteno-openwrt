@@ -1,17 +1,3 @@
 #!/bin/sh
-
-case "$1" in
-	get)
-		case "$2" in
-			hw.board.hardware) echo "EX400" ;;
-			hw.board.ethernetPorts) echo "2" ;;
-			hw.board.ethernetPortNames) echo "LAN WAN" ;;
-			hw.board.ethernetPortOrder) echo "eth0.1 eth0.2" ;;
-			hw.board.ethernetLanPorts) echo "eth0.1" ;;
-			hw.board.ethernetWanPort) echo "eth0.2" ;;
-		esac
-	;;
-	set)
-	;;
-esac
-
+#echo  $1 $2 $3
+/sbin/uci -c /lib/db/config $1 $2 $3

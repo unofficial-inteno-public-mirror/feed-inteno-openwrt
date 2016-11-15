@@ -14,7 +14,7 @@ fi
 
 test_connection() {
 	local addr="$1"
-	local defroute="$(ip r | grep default | awk '{print$3}')"
+	local defroute="$(ip r | grep default | awk '{print$3}' | head -1)"
 	local def6route="$(ip -f inet6 r | grep default | awk '{print$3}')"
 	local ping6dev="$(ip -f inet6 r | grep default | awk '{print$5}')"
 

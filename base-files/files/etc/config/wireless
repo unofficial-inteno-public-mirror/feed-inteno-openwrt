@@ -76,7 +76,7 @@ config wifi-iface
 	option network 'lan'
 	option mode 'ap'
 	option ssid 'Inteno-$BSSID4'
-	option encryption 'mixed-psk'
+	option encryption 'psk2'
 	option cipher 'auto'
 	option key '$WPAKEY'
 	option gtk_rekey '3600'

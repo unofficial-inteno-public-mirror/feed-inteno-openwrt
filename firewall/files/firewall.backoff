@@ -1,0 +1,14 @@
+#!/bin/sh
+. /lib/functions.sh
+
+add_rule(){
+	config_get port $1 port 22
+	zones="$(uci show firewall | awk -F"'" '/zone.*name/ {print $2 }')"
+	for zone in $zones; do
+		iptables -I zone_${zone}_input -p tcp -m tcp --dport $port -m state --state NEW -m recent --set --name Backoff_$port --rsource
+		iptables -I zone_${zone}_input -p tcp -m tcp --dport $port -m state --state NEW -m recent --update --seconds 60 --hitcount 10 --name Backoff_$port --rsource -j DROP
+	done
+}
+
+config_load dropbear
+config_foreach add_rule dropbear

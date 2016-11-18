@@ -51,9 +51,10 @@ internet_test() {
 	if [ "$?" -eq 0 ]; then
 		netcon=1
 		ubus call led.internet  set '{"state" : "ok"}'
-
+		echo "{ \"online\" : true }" > /tmp/internet_connection_status
 	else
 		ubus call led.internet  set '{"state" : "error"}'
+		echo "{ \"online\" : false }" > /tmp/internet_connection_status
 	fi
 }
 

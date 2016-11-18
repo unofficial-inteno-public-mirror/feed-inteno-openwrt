@@ -339,3 +339,6 @@ bring_wifi up
 ubus -t 5 call network reload
 # re-populate network in questd
 ubus -t 5 call router.network reload
+
+[ "$(uci -q get wireless.ra0.disabled)"  == "1" ] && ubus call led.wifi_2g set '{"state":"off"}' || ubus call led.wifi_2g set '{"state":"ok"}'
+[ "$(uci -q get wireless.rai0.disabled)" == "1" ] && ubus call led.wifi_5g set '{"state":"off"}' || ubus call led.wifi_5g set '{"state":"ok"}'

@@ -1,0 +1,134 @@
+commit 9027c492e94208aaba437b58afbe22396945f220
+Author: Alex Oprea <alex.oprea@inteno.se>
+Date:   Sun Nov 20 23:16:12 2016 +0100
+
+    mtu on bridge
+
+diff --git a/bridge.c b/bridge.c
+index a7fabd0..239166a 100644
+--- a/bridge.c
++++ b/bridge.c
+@@ -34,6 +34,7 @@ enum {
+ 	BRIDGE_ATTR_BRIDGE_EMPTY,
+ 	BRIDGE_ATTR_MULTICAST_QUERIER,
+ 	BRIDGE_ATTR_HASH_MAX,
++	BRIDGE_ATTR_MTU,
+ 	__BRIDGE_ATTR_MAX
+ };
+ 
+@@ -49,6 +50,7 @@ static const struct blobmsg_policy bridge_attrs[__BRIDGE_ATTR_MAX] = {
+ 	[BRIDGE_ATTR_BRIDGE_EMPTY] = { "bridge_empty", BLOBMSG_TYPE_BOOL },
+ 	[BRIDGE_ATTR_MULTICAST_QUERIER] = { "multicast_querier", BLOBMSG_TYPE_BOOL },
+ 	[BRIDGE_ATTR_HASH_MAX] = { "hash_max", BLOBMSG_TYPE_INT32 },
++	[BRIDGE_ATTR_MTU] = { "mtu", BLOBMSG_TYPE_INT32 },
+ };
+ 
+ static const struct uci_blob_param_info bridge_attr_info[__BRIDGE_ATTR_MAX] = {
+@@ -172,6 +174,41 @@ bridge_reset_primary(struct bridge_state *bst)
+ 		}
+ }
+ 
++/* update bridge mtu
++* use the min from: the mtu from config and the mtus on all members
++* return true if mtu has changed
++*/
++static bool
++bridge_refresh_mtu(struct bridge_state *bst)
++{
++	struct bridge_member *bm = NULL;
++	struct device *bmdev = NULL;
++	int mtu_config = bst->config.mtu;
++	int bmmtu_min = 2048, bmmtu = 0;
++	int mtu_old = bst->dev.settings.mtu, mtu_new;
++
++	vlist_for_each_element(&bst->members, bm, node) {
++		if (!bm->present)
++			continue;
++		bmdev = bm->dev.dev;
++		bmmtu = bmdev->settings.flags & DEV_OPT_MTU ? bmdev->settings.mtu : bmdev->orig_settings.mtu;
++		if (bmmtu < 68 || bmmtu > 2048)
++			continue;
++
++		if (bmmtu < bmmtu_min)
++			bmmtu_min = bmmtu;
++	}
++
++	mtu_new = bmmtu_min < mtu_config ? bmmtu_min : mtu_config;
++
++	if (mtu_new == mtu_old)
++		return false;
++
++	bst->dev.settings.mtu = mtu_new;
++	bst->dev.settings.flags |= DEV_OPT_MTU;
++	return true;
++}
++
+ static int
+ bridge_disable_member(struct bridge_member *bm)
+ {
+@@ -336,6 +373,7 @@ bridge_member_cb(struct device_user *dev, enum device_event ev)
+ 			 * in the kernel, apply the bridge settings in case the
+ 			 * bridge mtu is set
+ 			 */
++			bridge_refresh_mtu(bst);
+ 			system_if_apply_settings(&bst->dev, &bst->dev.settings,
+ 						 DEV_OPT_MTU | DEV_OPT_MTU6);
+ 		}
+@@ -595,6 +633,7 @@ bridge_apply_settings(struct bridge_state *bst, struct blob_attr **tb)
+ 	cfg->hash_max = 512;
+ 	cfg->bridge_empty = false;
+ 	cfg->priority = 0x7FFF;
++	cfg->mtu = 2048;
+ 
+ 	if ((cur = tb[BRIDGE_ATTR_STP]))
+ 		cfg->stp = blobmsg_get_bool(cur);
+@@ -631,6 +670,9 @@ bridge_apply_settings(struct bridge_state *bst, struct blob_attr **tb)
+ 
+ 	if ((cur = tb[BRIDGE_ATTR_BRIDGE_EMPTY]))
+ 		cfg->bridge_empty = blobmsg_get_bool(cur);
++
++	if ((cur = tb[BRIDGE_ATTR_MTU]))
++		cfg->mtu = blobmsg_get_u32(cur);
+ }
+ 
+ enum dev_change_type
+@@ -641,6 +683,7 @@ bridge_reload(struct device *dev, struct blob_attr *attr)
+ 	enum dev_change_type ret = DEV_CONFIG_APPLIED;
+ 	unsigned long diff;
+ 	struct bridge_state *bst;
++	int flag_mtu = dev->settings.flags & DEV_OPT_MTU;
+ 
+ 	BUILD_BUG_ON(sizeof(diff) < __BRIDGE_ATTR_MAX / 8);
+ 	BUILD_BUG_ON(sizeof(diff) < __DEV_ATTR_MAX / 8);
+@@ -655,6 +698,7 @@ bridge_reload(struct device *dev, struct blob_attr *attr)
+ 
+ 	bst->ifnames = tb_br[BRIDGE_ATTR_IFNAME];
+ 	device_init_settings(dev, tb_dev);
++	dev->settings.flags |= flag_mtu;
+ 	bridge_apply_settings(bst, tb_br);
+ 
+ 	if (bst->config_data) {
+@@ -683,6 +727,10 @@ bridge_reload(struct device *dev, struct blob_attr *attr)
+ 	free(bst->config_data);
+ 	bst->config_data = attr;
+ 	bridge_reset_primary(bst);
++
++	bridge_refresh_mtu(bst);
++	system_if_apply_settings(&bst->dev, &bst->dev.settings,
++				 DEV_OPT_MTU | DEV_OPT_MTU6);
+ 	return ret;
+ }
+ 
+diff --git a/system.h b/system.h
+index f9ad294..935a0d8 100644
+--- a/system.h
++++ b/system.h
+@@ -59,6 +59,8 @@ struct bridge_config {
+ 	int hello_time;
+ 	int max_age;
+ 	int hash_max;
++
++	int mtu;
+ };
+ 
+ enum macvlan_opt {

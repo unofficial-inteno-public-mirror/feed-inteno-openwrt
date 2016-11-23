@@ -32,19 +32,21 @@ test_connection() {
 }
 
 wan_have_ip() {
-    local port=$(uci get -q layer2_interface_ethernet.Wan.ifname)
-    local addr=$(ip a show dev $port | grep "inet "| awk '{print $2}')
+    local port="eth0.2"
+    local addr=""
+
+    [ -d /sys/class/net/$port ] && addr=$(ip a show dev $port | grep "inet "| awk '{print $2}')
 
     if [ -n "$addr" ]
     then
 	wanip=1
-	ubus call led.wan  set '{"state" : "ok"}'
+	ubus list led.wan >/dev/null 2>&1 && ubus call led.wan  set '{"state" : "ok"}'
     fi
     # dont set wan here status is set from hotplug, only set when ip is detected.
 }
 
 internet_test() {
-	local dest="$(uci get -q system.@system[0].netping_addr)"
+	local dest="$(uci -q get system.@system[0].netping_addr)"
 
 	test_connection $dest
 
@@ -53,13 +55,13 @@ internet_test() {
 		ubus call led.internet  set '{"state" : "ok"}'
 		echo "{ \"online\" : true }" > /tmp/internet_connection_status
 	else
-		ubus call led.internet  set '{"state" : "error"}'
+		ubus call led.internet  set '{"state" : "off"}'
 		echo "{ \"online\" : false }" > /tmp/internet_connection_status
 	fi
 }
 
 iptvtest() {
-	local dest="$(uci get -q system.@system[0].tvping_addr)"
+	local dest="$(uci -q get system.@system[0].tvping_addr)"
 
 	test_connection $dest
 

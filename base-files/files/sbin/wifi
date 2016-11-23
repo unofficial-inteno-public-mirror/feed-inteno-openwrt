@@ -60,6 +60,17 @@ vif_settings() {
 	local device ifname ssid encryption key encrtype authmode wpapsk
 	local key key1 key2 key3 key4
 
+	config_get mode $cfg mode
+
+	case "$iface" in
+		rai*|apclii*)
+			CONFILE=$RAI
+		;;
+		ra*|apcli*)
+			CONFILE=$RA
+		;;
+	esac
+
 	find_in_network $cfg $iface
 
 	config_get device $cfg device
@@ -95,28 +106,33 @@ vif_settings() {
 
 	VNO=$((_VIFNUM + 1 ))
 
-	case "$iface" in
-		rai*)
-			CONFILE=$RAI
+	case "$mode" in
+		sta|wet)
+			grep -q "ApCliAutoConnect=" $CONFILE && sed -i "s/ApCliAutoConnect=.*/ApCliAutoConnect=1/g" $CONFILE || echo "ApCliAutoConnect=1" >> $CONFILE
+			sed -i "s/ApCliEnable=.*/ApCliEnable=1/g" $CONFILE
+			sed -i "s/ApCliSsid=.*/ApCliSsid=$ssid/g" $CONFILE
+			sed -i "s/ApCliAuthMode=.*/ApCliAuthMode=$authmode/g" $CONFILE
+			sed -i "s/ApCliEncrypType=.*/ApCliEncrypType=$encrtype/g" $CONFILE
+			sed -i "s/ApCliWPAPSK=.*/ApCliWPAPSK=$wpapsk/g" $CONFILE
 		;;
-		ra*)
-			CONFILE=$RA
+		*)
+			sed -i "s/ApCliEnable=.*/ApCliEnable=0/g" $CONFILE
+
+			sed -i "s/AuthMode=.*/AuthMode=$authmode/g" $CONFILE
+			sed -i "s/EncrypType=.*/EncrypType=$encrtype/g" $CONFILE
+			sed -i "s/SSID$VNO=.*/SSID$VNO=$ssid/g" $CONFILE
+			sed -i "s/WPAPSK$VNO=.*/WPAPSK$VNO=$wpapsk/g" $CONFILE
+
+			sed -i "s/Key1Type=.*/Key1Type=0/g" $CONFILE
+			sed -i "s/Key1Str$VNO=.*/Key1Str$VNO=$key1/g" $CONFILE
+			sed -i "s/Key2Type=.*/Key2Type=0/g" $CONFILE
+			sed -i "s/Key2Str$VNO=.*/Key2Str$VNO=$key2/g" $CONFILE
+			sed -i "s/Key3Type=.*/Key3Type=0/g" $CONFILE
+			sed -i "s/Key3Str$VNO=.*/Key3Str$VNO=$key3/g" $CONFILE
+			sed -i "s/Key4Type=.*/Key4Type=0/g" $CONFILE
+			sed -i "s/Key4Str$VNO=.*/Key4Str$VNO=$key4/g" $CONFILE
 		;;
 	esac
-
-	sed -i "s/AuthMode=.*/AuthMode=$authmode/g" $CONFILE
-	sed -i "s/EncrypType=.*/EncrypType=$encrtype/g" $CONFILE
-	sed -i "s/SSID$VNO=.*/SSID$VNO=$ssid/g" $CONFILE
-	sed -i "s/WPAPSK$VNO=.*/WPAPSK$VNO=$wpapsk/g" $CONFILE
-
-	sed -i "s/Key1Type=.*/Key1Type=0/g" $CONFILE
-	sed -i "s/Key1Str$VNO=.*/Key1Str$VNO=$key1/g" $CONFILE
-	sed -i "s/Key2Type=.*/Key2Type=0/g" $CONFILE
-	sed -i "s/Key2Str$VNO=.*/Key2Str$VNO=$key2/g" $CONFILE
-	sed -i "s/Key3Type=.*/Key3Type=0/g" $CONFILE
-	sed -i "s/Key3Str$VNO=.*/Key3Str$VNO=$key3/g" $CONFILE
-	sed -i "s/Key4Type=.*/Key4Type=0/g" $CONFILE
-	sed -i "s/Key4Str$VNO=.*/Key4Str$VNO=$key4/g" $CONFILE
 
 	config_get_bool disabled $cfg disabled 0
 	if [ "$disabled" == "0" ]; then
@@ -141,6 +157,17 @@ configure_vif() {
 		ln=$((${#device}-1))
 		iface="${device:0:$ln}$_VIFNUM"
 	fi
+
+	config_get mode "$vif" mode
+
+	case "$device" in
+		rai*)
+			[ "$mode" == "sta" ] && iface="apclii0"
+		;;
+		ra*)
+			[ "$mode" == "sta" ] && iface="apcli0"
+		;;
+	esac
 
 	# set wireless ifname in wireless config
 	uci set wireless.$vif.ifname=$iface
@@ -263,15 +290,15 @@ configure_wifi() {
 bring_wifi() {
 	local action="$1"
 	[ -n "$action" ] || return
-	for rif in ra rai; do
+	for rif in ra rai apcli apclii; do
 		for idx in 0 1 2 3; do
 			rxif="$rif$idx"
 			if uci show network | grep network.*ifname | tr -d "'" | grep -qw "$rxif"; then
 				if [ "$action" == "up" ]; then
-					ifconfig $rxif up
+					ifconfig $rxif up 2>/dev/null
 				else
 					remove_from_networks $rxif
-					ifconfig $rxif down
+					ifconfig $rxif down 2>/dev/null
 				fi
 			fi
 		done

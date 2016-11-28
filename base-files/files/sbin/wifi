@@ -5,6 +5,8 @@
 . /lib/functions.sh
 . /usr/share/libubox/jshn.sh
 
+
+local _ACTION=$1
 local _VIFNUM=0
 
 RA="/etc/Wireless/RT2860/RT2860.dat"
@@ -92,6 +94,7 @@ vif_settings() {
 			config_get key4 $cfg key4 ""
 
 			sed -i "s/DefaultKeyID=.*/DefaultKeyID=$key/g" $CONFILE
+			sed -i "s/ApCliDefaultKeyID=.*/ApCliWPAPSK=$key/g" $CONFILE
 		;;
 		*psk*)
 			authmode="WPA2PSK"
@@ -108,12 +111,31 @@ vif_settings() {
 
 	case "$mode" in
 		sta|wet)
-			grep -q "ApCliAutoConnect=" $CONFILE && sed -i "s/ApCliAutoConnect=.*/ApCliAutoConnect=1/g" $CONFILE || echo "ApCliAutoConnect=1" >> $CONFILE
+			#grep -q "ApCliAutoConnect=" $CONFILE && sed -i "s/ApCliAutoConnect=.*/ApCliAutoConnect=1/g" $CONFILE || echo "ApCliAutoConnect=1" >> $CONFILE
 			sed -i "s/ApCliEnable=.*/ApCliEnable=1/g" $CONFILE
 			sed -i "s/ApCliSsid=.*/ApCliSsid=$ssid/g" $CONFILE
 			sed -i "s/ApCliAuthMode=.*/ApCliAuthMode=$authmode/g" $CONFILE
 			sed -i "s/ApCliEncrypType=.*/ApCliEncrypType=$encrtype/g" $CONFILE
 			sed -i "s/ApCliWPAPSK=.*/ApCliWPAPSK=$wpapsk/g" $CONFILE
+
+			sed -i "s/ApCliKey1Type=.*/ApCliKey1Type=1/g" $CONFILE
+			sed -i "s/ApCliKey1Str=.*/ApCliKey1Str=$key1/g" $CONFILE
+			sed -i "s/ApCliKey2Type=.*/ApCliKey2Type=1/g" $CONFILE
+			sed -i "s/ApCliKey2Str=.*/ApCliKey2Str=$key2/g" $CONFILE
+			sed -i "s/ApCliKey3Type=.*/ApCliKey3Type=1/g" $CONFILE
+			sed -i "s/ApCliKey3Str=.*/ApCliKey3Str=$key3/g" $CONFILE
+			sed -i "s/ApCliKey4Type=.*/ApCliKey4Type=1/g" $CONFILE
+			sed -i "s/ApCliKey4Str=.*/ApCliKey4Str=$key4/g" $CONFILE
+
+			sed -i "s/ApCliWPAPSK1=.*/ApCliWPAPSK1=/g" $CONFILE
+
+			sed -i "s/ApCliKey1Str1=.*/ApCliKey1Str1=/g" $CONFILE
+			sed -i "s/ApCliKey2Str1=.*/ApCliKey2Str1=/g" $CONFILE
+			sed -i "s/ApCliKey3Str1=.*/ApCliKey3Str1=/g" $CONFILE
+			sed -i "s/ApCliKey4Str1=.*/ApCliKey4Str1=/g" $CONFILE
+
+			sed -i "s/MACRepeaterEn=.*/MACRepeaterEn=0/g" $CONFILE
+			sed -i "s/MACRepeaterOuiMode=.*/MACRepeaterOuiMode=/g" $CONFILE
 		;;
 		*)
 			sed -i "s/ApCliEnable=.*/ApCliEnable=0/g" $CONFILE
@@ -269,6 +291,8 @@ wdev_settings() {
 	sed -i "s/MaxStaNum=.*/MaxStaNum=$maxassoc/g" $CONFILE
 	sed -i "s/HT_BW=.*/HT_BW=$htbw/g" $CONFILE
 	sed -i "s/VHT_BW=.*/VHT_BW=$vhtbw/g" $CONFILE
+
+	#sed -i "s/ApCliWirelessMode=.*/ApCliWirelessMode=$wirelessmode/g" $CONFILE
 }
 
 setup_wifi_device() {
@@ -341,8 +365,8 @@ case "$_ACTION" in
 	;;
 	down|off)
 		for idx in 0 1 2 3; do
-			ifconfig ra$idx down
-			ifconfig rai$idx down
+			ifconfig ra$idx down 2>/dev/null
+			ifconfig rai$idx down 2>/dev/null
 		done
 		exit
 	;;
@@ -366,6 +390,46 @@ bring_wifi up
 ubus -t 5 call network reload
 # re-populate network in questd
 ubus -t 5 call router.network reload
+
+setup_client_mode() {
+	local cfg="$1"
+	local mode ifname ssid
+	local encryption key wpapsk
+
+	config_get mode $cfg mode ap
+	[ "$mode" == "ap" ] && return
+
+	config_get ifname $cfg ifname
+	config_get ssid $cfg ssid
+	config_get encryption $cfg encryption
+	config_get key $cfg key
+
+	authmode="OPEN"
+	encrtype="NONE"
+
+	case "$encryption" in
+		*psk*)
+			authmode="WPA2PSK"
+			encrtype="AES"
+
+			config_get wpapsk $cfg key ""
+		;;
+		*wpa*)
+			authmode="WPA2"
+		;;
+	esac
+
+	iwpriv $ifname set ApCliEnable=0
+	iwpriv $ifname set ApCliSsid="$ssid"
+	iwpriv $ifname set ApCliAuthMode="$authmode"
+	iwpriv $ifname set ApCliEncrypType="$encrtype"
+	iwpriv $ifname set ApCliWPAPSK="$wpapsk"
+	iwpriv $ifname set ApCliEnable=1
+
+}
+
+config_load wireless
+config_foreach setup_client_mode wifi-iface
 
 [ "$(uci -q get wireless.ra0.disabled)"  == "1" ] && ubus call led.wifi_2g set '{"state":"off"}' || ubus call led.wifi_2g set '{"state":"ok"}'
 [ "$(uci -q get wireless.rai0.disabled)" == "1" ] && ubus call led.wifi_5g set '{"state":"off"}' || ubus call led.wifi_5g set '{"state":"ok"}'

@@ -1,0 +1,30 @@
+commit 4528e3a56cbedc7a06b1a754f200b680c610efa2
+Author: Hans Dedecker <dedeckeh@gmail.com>
+Date:   Mon Feb 1 10:56:25 2016 +0100
+
+    handler: Fix memory leak
+    
+    Call globfree to free dynamically allocated storage from a previous glob call
+    
+    Signed-off-by: Hans Dedecker <dedeckeh@gmail.com>
+
+diff --git a/handler.c b/handler.c
+index f81a7c5..0c4627f 100644
+--- a/handler.c
++++ b/handler.c
+@@ -128,10 +128,14 @@ void netifd_init_script_handlers(int dir_fd, script_dump_cb cb)
+ 	int i, prev_fd;
+ 
+ 	prev_fd = netifd_dir_push(dir_fd);
+-	glob("./*.sh", 0, NULL, &g);
++	if (glob("./*.sh", 0, NULL, &g))
++		return;
++
+ 	for (i = 0; i < g.gl_pathc; i++)
+ 		netifd_parse_script_handler(g.gl_pathv[i], cb);
+ 	netifd_dir_pop(prev_fd);
++
++	globfree(&g);
+ }
+ 
+ char *

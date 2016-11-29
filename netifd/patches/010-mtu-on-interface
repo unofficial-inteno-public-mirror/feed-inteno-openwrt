@@ -1,11 +1,4 @@
-commit 29262fcc3bdf3764fddfac1b393f4cb8e17bd845
-Author: Alex Oprea <alex.oprea@inteno.se>
-Date:   Sun Nov 20 23:13:10 2016 +0100
-
-    mtu on interface
-
 diff --git a/interface.c b/interface.c
-index 8e8d889..b80209d 100644
 --- a/interface.c
 +++ b/interface.c
 @@ -36,6 +36,7 @@ enum {
@@ -24,21 +17,21 @@ index 8e8d889..b80209d 100644
  	[IFACE_ATTR_DNS] = { .name = "dns", .type = BLOBMSG_TYPE_ARRAY },
  	[IFACE_ATTR_DNS_SEARCH] = { .name = "dns_search", .type = BLOBMSG_TYPE_ARRAY },
  	[IFACE_ATTR_INTERFACE] = { .name = "interface", .type = BLOBMSG_TYPE_STRING },
-@@ -789,6 +791,9 @@ interface_alloc(const char *name, struct blob_attr *config)
- 	if ((cur = tb[IFACE_ATTR_METRIC]))
- 		iface->metric = blobmsg_get_u32(cur);
+@@ -870,6 +872,9 @@ static bool __interface_add(struct interface *iface, struct blob_attr *config, b
+ 			iface->ifname = blobmsg_data(cur);
+ 	}
  
 +	if ((cur = tb[IFACE_ATTR_MTU]))
 +		iface->mtu = blobmsg_get_u32(cur);
 +
- 	if ((cur = tb[IFACE_ATTR_IP6ASSIGN]))
- 		iface->assignment_length = blobmsg_get_u32(cur);
- 
+ 	iface->config = config;
+ 	vlist_add(&interfaces, &iface->node, iface->name);
+ 	return true;
 @@ -922,6 +927,10 @@ interface_set_main_dev(struct interface *iface, struct device *dev)
  	if (iface->main_dev.dev == dev)
  		return;
  
-+	if (iface->mtu >= 68 && iface->mtu <=2048) {
++	if (iface->mtu >= 68 && iface->mtu <=2048 && dev) {
 +		dev->settings.mtu = iface->mtu;
 +		dev->settings.flags |= DEV_OPT_MTU;
 +	}
@@ -54,7 +47,6 @@ index 8e8d889..b80209d 100644
  	UPDATE(ip4table, reload_ip);
  	UPDATE(ip6table, reload_ip);
 diff --git a/interface.h b/interface.h
-index d836c40..f939166 100644
 --- a/interface.h
 +++ b/interface.h
 @@ -143,6 +143,7 @@ struct interface {
@@ -66,7 +58,6 @@ index d836c40..f939166 100644
  	unsigned int ip6table;
  
 diff --git a/system-linux.c b/system-linux.c
-index d8a2344..4b5341b 100644
 --- a/system-linux.c
 +++ b/system-linux.c
 @@ -1208,7 +1208,7 @@ system_if_apply_settings(struct device *dev, struct device_settings *s, unsigned

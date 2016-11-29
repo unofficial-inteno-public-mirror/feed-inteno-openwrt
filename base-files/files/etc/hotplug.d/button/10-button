@@ -1,0 +1,98 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+wifibutton_action() {
+	local wldisabled="$(uci -q get wireless.$1.disabled)"
+	wldisabled=${wldisabled:-0}
+	if [ "$wldisabled" == "1" ]; then
+		uci -q set wireless.$1.disabled=0
+	else
+		uci -q set wireless.$1.disabled=1
+	fi
+	uci commit wireless
+	killall -9 wifi 2>/dev/null
+	/sbin/wifi reload &
+}
+
+wpsbutton_action () {
+	ubus call router.wps pbc
+}
+
+get_wifi_wet_info() {
+	local opt="$1"
+	opt="${opt:-ifname}"
+	handle_interface() {
+		config_get mode "$1" mode
+		if [ "$mode" == "wet" -o "$mode" == "sta" ] ; then
+			config_get val "$1" $opt
+			echo "$val"
+		fi
+	}
+	config_load wireless
+	config_foreach handle_interface wifi-iface "$device"
+}
+
+wpscbutton_action () {
+	local wanbaseif=$(uci get layer2_interface_ethernet.Wan.baseifname)
+	local cur_mode=$(uci -q get netmode.setup.curmode)
+	local wet_iface wet_ssid carrier fl
+	local wps_paired=0
+	local tm=0
+
+#	json_load "$(devstatus $wanbaseif)"
+#	json_get_var carrier carrier
+#	[ "$carrier" == "1" ] && return
+
+	if [ "$cur_mode" == "repeater" ] ; then
+		ubus call router.wps pbc_client
+	else
+		ubus call leds set  '{"state" : "test"}'
+		uci set netmode.setup.curmode=repeater
+		uci set netmode.repeater.reboot="0"
+		uci commit netmode
+		/etc/init.d/netmode reload
+		echo "Restarting network services" > /dev/console
+		ubus call network reload
+		wifi reload
+		ubus call router.network reload
+		ubus call router.wps pbc_client
+		sleep 30
+		ubus call leds set  '{"state" : "normal"}'
+	fi
+}
+
+case "$ACTION" in
+        add|register)
+		[ "resetbutton" == "$INTERFACE" ] && {
+			printf "\n\nReset button is pressed\n\n" > /dev/console
+			/sbin/defaultreset
+		}
+		[ "wifi_2g" == "$INTERFACE" ] && {
+			printf "\n\nWiFi 2.4G button is pressed\n\n" > /dev/console
+			wifibutton_action ra0
+		}
+		[ "wifi_5g" == "$INTERFACE" ] && {
+			printf "\n\nWiFi 5G button is pressed\n\n" > /dev/console
+			wifibutton_action rai0
+		}
+		[ "wpsbutton" == "$INTERFACE" ] && {
+			[ -e "/tmp/wps_active" ] && return
+			touch /tmp/wps_active
+			printf "\n\nWPS button is pressed\n\n" > /dev/console
+			wpsbutton_action
+			rm /tmp/wps_active
+		}
+		[ "wpscbutton" == "$INTERFACE" ] && {
+			[ -e "/tmp/wps_active" ] && return
+			touch /tmp/wps_active
+			printf "\n\nWPS client button is pressed\n\n" > /dev/console
+			wpscbutton_action
+			rm /tmp/wps_active
+		}
+
+        ;;
+        remove|unregister)
+        ;;
+esac

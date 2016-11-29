@@ -184,10 +184,10 @@ configure_vif() {
 
 	case "$device" in
 		rai*)
-			[ "$mode" == "sta" ] && iface="apclii0"
+			[ "$mode" == "sta" -o "$mode" == "wet" ] && iface="apclii0"
 		;;
 		ra*)
-			[ "$mode" == "sta" ] && iface="apcli0"
+			[ "$mode" == "sta" -o "$mode" == "wet" ] && iface="apcli0"
 		;;
 	esac
 
@@ -397,7 +397,7 @@ setup_client_mode() {
 	local encryption key wpapsk
 
 	config_get mode $cfg mode ap
-	[ "$mode" == "ap" ] && return
+	[ "$mode" == "sta" -o "$mode" == "wet" ] || return
 
 	config_get ifname $cfg ifname
 	config_get ssid $cfg ssid

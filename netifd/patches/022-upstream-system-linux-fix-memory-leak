@@ -1,0 +1,23 @@
+commit 29a27809ed9eecf7625e1f51cfb9b749d5bf62bc
+Author: Hans Dedecker <dedeckeh@gmail.com>
+Date:   Mon Feb 1 10:56:27 2016 +0100
+
+    system-linux: Fix memory leak
+    
+    Call globfree to free dynamically allocated storage from a previous glob call
+    
+    Signed-off-by: Hans Dedecker <dedeckeh@gmail.com>
+
+diff --git a/system-linux.c b/system-linux.c
+index 4b5341b..a8f26c9 100644
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -1178,6 +1178,8 @@ system_if_set_rps_xps_val(const char *path, int val)
+ 	snprintf(val_buf, sizeof(val_buf), "%x", val);
+ 	for (i = 0; i < gl.gl_pathc; i++)
+ 		system_set_sysctl(gl.gl_pathv[i], val_buf);
++
++	globfree(&gl);
+ }
+ 
+ static void

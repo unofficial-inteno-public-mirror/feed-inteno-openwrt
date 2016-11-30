@@ -55,10 +55,13 @@ wpscbutton_action () {
 		/etc/init.d/netmode reload
 		echo "Restarting network services" > /dev/console
 		ubus call network reload
+		#ifup "$(get_wifi_wet_info network)"
 		wifi reload
+		sleep 5
 		ubus call router.network reload
+		echo "Starting WPS PBC client mode" > /dev/console
 		ubus call router.wps pbc_client
-		sleep 30
+		sleep 20
 		ubus call leds set  '{"state" : "normal"}'
 	fi
 }

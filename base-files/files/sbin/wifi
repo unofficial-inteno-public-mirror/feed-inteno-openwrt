@@ -94,7 +94,7 @@ vif_settings() {
 			config_get key4 $cfg key4 ""
 
 			sed -i "s/DefaultKeyID=.*/DefaultKeyID=$key/g" $CONFILE
-			sed -i "s/ApCliDefaultKeyID=.*/ApCliWPAPSK=$key/g" $CONFILE
+			sed -i "s/ApCliDefaultKeyID=.*/ApCliDefaultKeyID=$key/g" $CONFILE
 		;;
 		*psk*)
 			authmode="WPA2PSK"

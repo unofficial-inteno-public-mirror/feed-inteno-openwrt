@@ -433,7 +433,7 @@ case "$_ACTION" in
 		exit
 	;;
 	import)
-		wifi_import_settings "{\"ssid\" : \"$2\", \"key\" : \"$3\" }"
+		wifi_import_settings "$2"
 		exit
 	;;
 	toggle)
@@ -488,7 +488,6 @@ setup_client_mode() {
 	iwpriv $ifname set ApCliEncrypType="$encrtype"
 	iwpriv $ifname set ApCliWPAPSK="$wpapsk"
 	iwpriv $ifname set ApCliEnable=1
-
 }
 
 config_load wireless

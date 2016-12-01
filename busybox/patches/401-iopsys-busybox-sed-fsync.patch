@@ -1,0 +1,13 @@
+diff --git a/editors/sed.c b/editors/sed.c
+index 7bbf820..a2f0f7d 100644
+--- a/editors/sed.c
++++ b/editors/sed.c
+@@ -1568,6 +1568,8 @@ int sed_main(int argc UNUSED_PARAM, char **argv)
+ 			fchown(nonstdoutfd, statbuf.st_uid, statbuf.st_gid);
+ 
+ 			process_files();
++			fflush(G.nonstdout);
++			fsync(fileno(G.nonstdout));
+ 			fclose(G.nonstdout);
+ 			G.nonstdout = stdout;
+ 

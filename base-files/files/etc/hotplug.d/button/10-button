@@ -34,19 +34,29 @@ get_wifi_wet_info() {
 	config_foreach handle_interface wifi-iface "$device"
 }
 
+activate_wps_enrollee() {
+	iwpriv apcli0 set WscConfMode=1
+	iwpriv apcli0 set WscConfStatus=1
+	iwpriv apcli0 set WscMode=2
+	iwpriv apcli0 set WscGetConf=1
+}
+
 wpscbutton_action () {
-	local wanbaseif=$(uci get layer2_interface_ethernet.Wan.baseifname)
+	local wanbaseif="eth0.2"
 	local cur_mode=$(uci -q get netmode.setup.curmode)
-	local wet_iface wet_ssid carrier fl
+	local wet_iface wet_ssid carrier fl link
 	local wps_paired=0
 	local tm=0
 
-#	json_load "$(devstatus $wanbaseif)"
-#	json_get_var carrier carrier
-#	[ "$carrier" == "1" ] && return
+	link=$(swconfig dev switch0 port 0 get link | awk '{print$2}' | cut -d':' -f2)
+
+	if [ "$link" == "up" ]; then
+		activate_wps_enrollee
+		return
+	fi
 
 	if [ "$cur_mode" == "repeater" ] ; then
-		ubus call router.wps pbc_client
+		activate_wps_enrollee
 	else
 		ubus call leds set  '{"state" : "test"}'
 		uci set netmode.setup.curmode=repeater
@@ -60,7 +70,7 @@ wpscbutton_action () {
 		sleep 5
 		ubus call router.network reload
 		echo "Starting WPS PBC client mode" > /dev/console
-		ubus call router.wps pbc_client
+		activate_wps_enrollee
 		sleep 20
 		ubus call leds set  '{"state" : "normal"}'
 	fi

@@ -426,7 +426,9 @@ case "$_ACTION" in
 	down|off)
 		for idx in 0 1 2 3; do
 			ifconfig ra$idx down 2>/dev/null
+			ifconfig apcli$idx down 2>/dev/null
 			ifconfig rai$idx down 2>/dev/null
+			ifconfig apclii$idx down 2>/dev/null
 		done
 		exit
 	;;

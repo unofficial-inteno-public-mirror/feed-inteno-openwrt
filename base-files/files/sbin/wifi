@@ -8,6 +8,7 @@
 
 local _ACTION=$1
 local _VIFNUM=0
+local _REPEATER=0
 
 RA="/etc/Wireless/RT2860/RT2860.dat"
 RAI="/etc/Wireless/iNIC/iNIC_ap.dat"
@@ -369,11 +370,6 @@ wifi_import_settings()
 
 		[ "$autoconf" == "1" ] || return
 
-		[ $mode == "sta" || $mode == "wet" ] && {
-			config_get wetnet "$1" network
-			clientmode=1
-		}
-
 		if [ "$ssid" != "$newssid" ]; then
 			uci -q set wireless.$1.ssid="$newssid"
 			iwpriv $ifname set SSID="$newssid"
@@ -396,6 +392,24 @@ wifi_import_settings()
 			fi
 			changed=1
 		fi
+
+		[ $mode == "sta" || $mode == "wet" ] && {
+			clientmode=1
+
+			config_get wetnet "$1" network
+
+			iwpriv $ifname set ApCliEnable=0
+			iwpriv $ifname set ApCliSsid="$newssid"
+			if [ -n "$newkey" ]; then
+				iwpriv $ifname set ApCliAuthMode="WPAPSK"
+				iwpriv $ifname set ApCliEncrypType="AES"
+			else
+				iwpriv $ifname set ApCliAuthMode="OPEN"
+				iwpriv $ifname set ApCliEncrypType="NONE"
+			fi
+			iwpriv $ifname set ApCliWPAPSK="$newkey"
+			iwpriv $ifname set ApCliEnable=1
+		}
 	}
 
 	config_load wireless
@@ -460,7 +474,7 @@ setup_client_mode() {
 	local encryption key wpapsk
 
 	config_get mode $cfg mode ap
-	[ "$mode" == "sta" -o "$mode" == "wet" ] || return
+	[ "$mode" == "sta" -o "$mode" == "wet" ] && _REPEATER=1 || return
 
 	config_get ifname $cfg ifname
 	config_get ssid $cfg ssid
@@ -492,6 +506,16 @@ setup_client_mode() {
 
 config_load wireless
 config_foreach setup_client_mode wifi-iface
+
+if [ $_REPEATER -eq 1 ]; then
+	# open a tcp socket and wait for
+	# master AP to push new configuration
+	pidof wificontrol >/dev/null || wificontrol -s &
+else
+	killall -9 wificontrol >/dev/null 2>&1
+	# configure connected repeaters/extenders
+	#wificontrol -c &
+fi
 
 [ "$(uci -q get wireless.ra0.disabled)"  == "1" ] && ubus call led.wifi_2g set '{"state":"off"}' || ubus call led.wifi_2g set '{"state":"ok"}'
 [ "$(uci -q get wireless.rai0.disabled)" == "1" ] && ubus call led.wifi_5g set '{"state":"off"}' || ubus call led.wifi_5g set '{"state":"ok"}'

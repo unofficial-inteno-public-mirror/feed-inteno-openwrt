@@ -35,10 +35,12 @@ get_wifi_wet_info() {
 }
 
 activate_wps_enrollee() {
-	iwpriv apcli0 set WscConfMode=1
-	iwpriv apcli0 set WscConfStatus=1
-	iwpriv apcli0 set WscMode=2
-	iwpriv apcli0 set WscGetConf=1
+	local apclif="$(get_wifi_wet_info ifname)"
+
+	iwpriv $apclif set WscConfMode=1
+	iwpriv $apclif set WscConfStatus=1
+	iwpriv $apclif set WscMode=2
+	iwpriv $apclif set WscGetConf=1
 }
 
 wpscbutton_action () {

@@ -463,6 +463,9 @@ bring_wifi down
 configure_wifi
 bring_wifi up
 
+# register rlt_wifi with hw_nat module
+iwpriv rai0 set hw_nat_register=1
+
 # trigger network reload
 ubus -t 5 call network reload
 # re-populate network in questd

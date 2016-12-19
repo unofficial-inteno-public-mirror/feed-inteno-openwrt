@@ -1,0 +1,18 @@
+uci -q get firewall.settings || {
+	uci -q set firewall.settings=settings
+	uci -q set firewall.settings.disabled=0
+}
+
+uci -q get firewall.parental || {
+	uci -q set firewall.parental=include
+	uci -q set firewall.parental.path="/etc/firewall.parentalcontrol"
+	uci -q set firewall.parental.reload=1
+}
+
+uci -q get firewall.backoff || {
+	uci -q set firewall.backoff=include
+	uci -q set firewall.backoff.path="/etc/firewall.backoff"
+	uci -q set firewall.backoff.reload=1
+}
+
+uci -q commit firewall

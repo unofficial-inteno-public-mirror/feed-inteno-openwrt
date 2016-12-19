@@ -61,6 +61,8 @@ define Package/firewall/install
 	$(INSTALL_DATA) ./files/firewall.parentalcontrol $(1)/etc/firewall.parentalcontrol
 	$(INSTALL_DIR) $(1)/lib/network
 	$(INSTALL_DATA) ./files/firewall.sh $(1)/lib/network/
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_DATA) ./files/firewall.ucidefault $(1)/etc/uci-defaults/40-firewall-add-missing-sections
 endef
 
 $(eval $(call BuildPackage,firewall))

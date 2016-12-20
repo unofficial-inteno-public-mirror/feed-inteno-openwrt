@@ -1,0 +1,9 @@
+#!/bin/sh
+
+ubus call leds set '{ "state": "test"}'
+printf "\n\n*** Restore to default settings ***\n\n" > /dev/console
+rm -rf /rom/overlay/*
+export REBOOT_REASON=defaultreset
+echo 1 >/tmp/defaultreset
+reboot
+

@@ -355,6 +355,7 @@ wifi_import_settings()
 {
 	local ssid key autoconf
 	local newssid newkey
+	local authmode encrtype
 	local changed=0
 	local clientmode=0
 	local wetnet=
@@ -395,20 +396,23 @@ wifi_import_settings()
 			changed=1
 		fi
 
-		[ $mode == "sta" || $mode == "wet" ] && {
+		[ "$mode" == "sta" -o "$mode" == "wet" ] && {
 			clientmode=1
 
 			config_get wetnet "$1" network
 
+			if [ -n "$newkey" ]; then
+				authmode="WPA2PSK"
+				encrtype="AES"
+			else
+				authmode="OPEN"
+				encrtype="NONE"
+			fi
+
 			iwpriv $ifname set ApCliEnable=0
 			iwpriv $ifname set ApCliSsid="$newssid"
-			if [ -n "$newkey" ]; then
-				iwpriv $ifname set ApCliAuthMode="WPAPSK"
-				iwpriv $ifname set ApCliEncrypType="AES"
-			else
-				iwpriv $ifname set ApCliAuthMode="OPEN"
-				iwpriv $ifname set ApCliEncrypType="NONE"
-			fi
+			iwpriv $ifname set ApCliAuthMode="$authmode"
+			iwpriv $ifname set ApCliEncrypType="$encrtype"
 			iwpriv $ifname set ApCliWPAPSK="$newkey"
 			iwpriv $ifname set ApCliEnable=1
 		}

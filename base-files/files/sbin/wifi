@@ -293,6 +293,8 @@ wdev_settings() {
 	sed -i "s/HT_BW=.*/HT_BW=$htbw/g" $CONFILE
 	sed -i "s/VHT_BW=.*/VHT_BW=$vhtbw/g" $CONFILE
 
+	grep -q "IgmpSnEnable=" $CONFILE && sed -i "s/IgmpSnEnable=.*/IgmpSnEnable=1/g" $CONFILE || echo "IgmpSnEnable=1" >> $CONFILE
+
 	#sed -i "s/ApCliWirelessMode=.*/ApCliWirelessMode=$wirelessmode/g" $CONFILE
 }
 

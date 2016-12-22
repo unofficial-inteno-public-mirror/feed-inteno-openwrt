@@ -224,7 +224,7 @@ wdev_settings() {
 	[ "$disabled" == "1" ] && radio=0 || radio=1
 	config_get_bool radio $cfg radio $radio
 
-	config_get country $cfg country "SV"
+	config_get country $cfg country ""
 	config_get hwmode $cfg hwmode "auto"
 	config_get channel $cfg channel "auto"
 	[ "$channel" == "auto" ] && autoch=1 || autoch=0

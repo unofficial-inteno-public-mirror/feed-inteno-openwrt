@@ -205,7 +205,7 @@ wdev_settings() {
 	local device=$cfg
 	local country channel radio country_code disabled
 	local dfsc beamforming dfsc isac autoch autochskplist
-	local maxassoc bandwidth bwdef htbw vhtbw
+	local maxassoc bandwidth bwdef htbw vhtbw band_steering
 
 	case "$device" in
 		rai*)
@@ -296,6 +296,9 @@ wdev_settings() {
 	grep -q "IgmpSnEnable=" $CONFILE && sed -i "s/IgmpSnEnable=.*/IgmpSnEnable=1/g" $CONFILE || echo "IgmpSnEnable=1" >> $CONFILE
 
 	#sed -i "s/ApCliWirelessMode=.*/ApCliWirelessMode=$wirelessmode/g" $CONFILE
+
+	config_get band_steering status bsd "0"
+	sed -i "s/BandSteering=.*/BandSteering=$band_steering/g" $CONFILE
 }
 
 setup_wifi_device() {

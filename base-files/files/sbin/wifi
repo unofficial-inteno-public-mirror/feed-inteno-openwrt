@@ -112,7 +112,6 @@ vif_settings() {
 
 	case "$mode" in
 		sta|wet)
-			#grep -q "ApCliAutoConnect=" $CONFILE && sed -i "s/ApCliAutoConnect=.*/ApCliAutoConnect=1/g" $CONFILE || echo "ApCliAutoConnect=1" >> $CONFILE
 			sed -i "s/ApCliEnable=.*/ApCliEnable=1/g" $CONFILE
 			sed -i "s/ApCliSsid=.*/ApCliSsid=$ssid/g" $CONFILE
 			sed -i "s/ApCliAuthMode=.*/ApCliAuthMode=$authmode/g" $CONFILE
@@ -293,7 +292,7 @@ wdev_settings() {
 	sed -i "s/HT_BW=.*/HT_BW=$htbw/g" $CONFILE
 	sed -i "s/VHT_BW=.*/VHT_BW=$vhtbw/g" $CONFILE
 
-	grep -q "IgmpSnEnable=" $CONFILE && sed -i "s/IgmpSnEnable=.*/IgmpSnEnable=1/g" $CONFILE || echo "IgmpSnEnable=1" >> $CONFILE
+	sed -i "s/IgmpSnEnable=.*/IgmpSnEnable=1/g" $CONFILE
 
 	#sed -i "s/ApCliWirelessMode=.*/ApCliWirelessMode=$wirelessmode/g" $CONFILE
 
@@ -514,6 +513,7 @@ setup_client_mode() {
 	iwpriv $ifname set ApCliEncrypType="$encrtype"
 	iwpriv $ifname set ApCliWPAPSK="$wpapsk"
 	iwpriv $ifname set ApCliEnable=1
+	iwpriv $ifname set ApCliAutoConnect=1
 }
 
 config_load wireless

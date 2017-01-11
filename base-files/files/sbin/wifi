@@ -92,6 +92,7 @@ wifi_detect() {
 		wlctl -i $1 chanspecs -b $bno -w 20 | awk '{print$1}' > /$WLDIR/$1"_chanspecs"
 		wlctl -i $1 chanspecs -b $bno -w 40 | awk '{print$1}' >> /$WLDIR/$1"_chanspecs"
 		wlctl -i $1 chanspecs -b $bno -w 80 | awk '{print$1}' >> /$WLDIR/$1"_chanspecs"
+		wlctl -i $1 chanspecs -b $bno -w 160 2>/dev/null | awk '{print$1}' >> /$WLDIR/$1"_chanspecs"
 		sed -i '/^$/d' /$WLDIR/$1"_chanspecs"
 	}
 
@@ -818,7 +819,7 @@ wdev_settings() {
 			acs_scan_timer=$((scantimer * 60))
 			[ -n "$_ACSIFS" ] && _ACSIFS="$_ACSIFS $device" || _ACSIFS="$device"
 		;;
-		*u|*l|*/80)
+		*u|*l|*/80|*/160)
 			chanspec=$channel
 			channel=$(echo $chanspec | awk -'F[u,l,/]' '{print$1}')
 		;;
@@ -828,11 +829,14 @@ wdev_settings() {
 				chanspec=$(wlctl -i $device chanspecs -b $freq -w 40 | grep -w "$channel\"l\"\|$channel\"u\"")
 			elif [ "$bandwidth" == "80" ]; then
 				chanspec="$channel/80"
+			elif [ "$bandwidth" == "160" ]; then
+				chanspec="$channel/160"
 			fi
 		;;
 	esac
 
 	case "$bandwidth" in
+		160) bw_cap=f ;;
 		80) bw_cap=7 ;;
 		40) bw_cap=3 ;;
 		*) bw_cap=1 ;;

@@ -259,7 +259,7 @@ firewall_preconf() {
 	rematch_duidip6
 	reconf_parental
 	reindex_dmzhost
-	http_port_management
+	#http_port_management
 	uci -q commit firewall
 	parental_schedule_flowcache_flush
 }

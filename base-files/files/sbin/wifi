@@ -725,7 +725,7 @@ wdev_settings() {
 	local cfg=$1
 	local device=$cfg
 	local country band bandwidth hwmode channel scantimer disabled radio
-	local wme wme_no_ack wme_apsd frag rts dtim bcn frameburst
+	local wme wme_no_ack wme_apsd frag rts dtim bcn frameburst atf
 	local rifs rifs_advert maxassoc reg_mode acs_dfs acs_fcs beamforming
 	local rxchain_pwrsave_enable rxchain_pwrsave_pps rxchain_pwrsave_quiet_time
 
@@ -752,6 +752,7 @@ wdev_settings() {
 	config_get maxassoc $cfg maxassoc "32"
 	config_get reg_mode $cfg reg_mode "h"
 	config_get acs_dfs $cfg dfsc "1"
+	config_get atf $cfg atf "0"
 	config_get beamforming $cfg beamforming "1"
 	config_get rxchain_pwrsave_enable $cfg rxchainps "1"
 	config_get rxchain_pwrsave_pps $cfg rxchainps_qt "10"
@@ -880,6 +881,7 @@ wdev_settings() {
 	nvram set "$device"_wme_apsd=$wme_apsd
 	nvram set "$device"_wme_no_ack=$wme_no_ack
 	nvram set "$device"_reg_mode=$reg_mode
+	nvram set "$device"_atf=$atf
 	nvram set "$device"_radio=$radio
 
 	# disable radio if no virtual interface lives on it

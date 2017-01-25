@@ -107,6 +107,20 @@ wifi_detect() {
 		uci commit wireless
 	fi
 
+	if ! uci -q get wireless.bandsteering; then
+		[ -f /etc/config/wireless ] || touch /etc/config/wireless && {
+			bs="$(uci -q get wireless.status.bandsteering)"
+			bs=${bs:-0}
+			uci -q delete wireless.status.bandsteering
+		}
+
+		uci add wireless bandsteering
+		uci rename wireless.@bandsteering[-1]=bandsteering
+		uci set wireless.bandsteering.enabled=$bs
+		uci set wireless.bandsteering.policy=0
+		uci commit wireless
+	fi
+
 	mkdir -p $WLDIR
 	for wl in $wls; do
 		if wlctl -i $wl ap >/dev/null 2>&1; then

@@ -108,15 +108,16 @@ wifi_detect() {
 	fi
 
 	if ! uci -q get wireless.bandsteering; then
+		bstr=0
 		[ -f /etc/config/wireless ] || touch /etc/config/wireless && {
-			bs="$(uci -q get wireless.status.bandsteering)"
-			bs=${bs:-0}
+			bstr="$(uci -q get wireless.status.bandsteering)"
+			bstr=${bstr:-0}
 			uci -q delete wireless.status.bandsteering
 		}
 
 		uci add wireless bandsteering
 		uci rename wireless.@bandsteering[-1]=bandsteering
-		uci set wireless.bandsteering.enabled=$bs
+		uci set wireless.bandsteering.enabled=$bstr
 		uci set wireless.bandsteering.policy=0
 		uci commit wireless
 	fi

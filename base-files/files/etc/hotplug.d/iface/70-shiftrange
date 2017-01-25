@@ -213,8 +213,7 @@ parse_lan()
 		[ -z "$newips" ] && newips="$newip" ||  newips="$newips $newip"
 
 		ips_changed=1
-		logger "$0: Changing the ip on interface $interface from $ip to $newip/${newnet##*/}"
-		echo "$0: Changing the ip on interface $interface from $ip to $newip/${newnet##*/}" >/dev/console
+		logger -s -t $0[$$] "Changing the ip on interface $interface from $ip to $newip/${newnet##*/}"
 	done
 
 	#assign the new ips

@@ -9,6 +9,7 @@
 local _ACTION=$1
 local _VIFNUM=0
 local _REPEATER=0
+local _DAT=1
 
 RA="/etc/Wireless/RT2860/RT2860.dat"
 RAI="/etc/Wireless/iNIC/iNIC_ap.dat"
@@ -112,47 +113,52 @@ vif_settings() {
 
 	case "$mode" in
 		sta|wet)
-			sed -i "s/ApCliEnable=.*/ApCliEnable=1/g" $CONFILE
-			sed -i "s/ApCliSsid=.*/ApCliSsid=$ssid/g" $CONFILE
-			sed -i "s/ApCliAuthMode=.*/ApCliAuthMode=$authmode/g" $CONFILE
-			sed -i "s/ApCliEncrypType=.*/ApCliEncrypType=$encrtype/g" $CONFILE
-			sed -i "s/ApCliWPAPSK=.*/ApCliWPAPSK=$wpapsk/g" $CONFILE
+			# check if we should touch the .dat file			
+			if [ $_DAT == 1 ]; then
+				sed -i "s/ApCliEnable=.*/ApCliEnable=1/g" $CONFILE
+				sed -i "s/ApCliSsid=.*/ApCliSsid=$ssid/g" $CONFILE
+				sed -i "s/ApCliAuthMode=.*/ApCliAuthMode=$authmode/g" $CONFILE
+				sed -i "s/ApCliEncrypType=.*/ApCliEncrypType=$encrtype/g" $CONFILE
+				sed -i "s/ApCliWPAPSK=.*/ApCliWPAPSK=$wpapsk/g" $CONFILE
 
-			sed -i "s/ApCliKey1Type=.*/ApCliKey1Type=1/g" $CONFILE
-			sed -i "s/ApCliKey1Str=.*/ApCliKey1Str=$key1/g" $CONFILE
-			sed -i "s/ApCliKey2Type=.*/ApCliKey2Type=1/g" $CONFILE
-			sed -i "s/ApCliKey2Str=.*/ApCliKey2Str=$key2/g" $CONFILE
-			sed -i "s/ApCliKey3Type=.*/ApCliKey3Type=1/g" $CONFILE
-			sed -i "s/ApCliKey3Str=.*/ApCliKey3Str=$key3/g" $CONFILE
-			sed -i "s/ApCliKey4Type=.*/ApCliKey4Type=1/g" $CONFILE
-			sed -i "s/ApCliKey4Str=.*/ApCliKey4Str=$key4/g" $CONFILE
+				sed -i "s/ApCliKey1Type=.*/ApCliKey1Type=1/g" $CONFILE
+				sed -i "s/ApCliKey1Str=.*/ApCliKey1Str=$key1/g" $CONFILE
+				sed -i "s/ApCliKey2Type=.*/ApCliKey2Type=1/g" $CONFILE
+				sed -i "s/ApCliKey2Str=.*/ApCliKey2Str=$key2/g" $CONFILE
+				sed -i "s/ApCliKey3Type=.*/ApCliKey3Type=1/g" $CONFILE
+				sed -i "s/ApCliKey3Str=.*/ApCliKey3Str=$key3/g" $CONFILE
+				sed -i "s/ApCliKey4Type=.*/ApCliKey4Type=1/g" $CONFILE
+				sed -i "s/ApCliKey4Str=.*/ApCliKey4Str=$key4/g" $CONFILE
 
-			sed -i "s/ApCliWPAPSK1=.*/ApCliWPAPSK1=/g" $CONFILE
+				sed -i "s/ApCliWPAPSK1=.*/ApCliWPAPSK1=/g" $CONFILE
 
-			sed -i "s/ApCliKey1Str1=.*/ApCliKey1Str1=/g" $CONFILE
-			sed -i "s/ApCliKey2Str1=.*/ApCliKey2Str1=/g" $CONFILE
-			sed -i "s/ApCliKey3Str1=.*/ApCliKey3Str1=/g" $CONFILE
-			sed -i "s/ApCliKey4Str1=.*/ApCliKey4Str1=/g" $CONFILE
+				sed -i "s/ApCliKey1Str1=.*/ApCliKey1Str1=/g" $CONFILE
+				sed -i "s/ApCliKey2Str1=.*/ApCliKey2Str1=/g" $CONFILE
+				sed -i "s/ApCliKey3Str1=.*/ApCliKey3Str1=/g" $CONFILE
+				sed -i "s/ApCliKey4Str1=.*/ApCliKey4Str1=/g" $CONFILE
 
-			sed -i "s/MACRepeaterEn=.*/MACRepeaterEn=0/g" $CONFILE
-			sed -i "s/MACRepeaterOuiMode=.*/MACRepeaterOuiMode=/g" $CONFILE
-		;;
+				sed -i "s/MACRepeaterEn=.*/MACRepeaterEn=0/g" $CONFILE
+				sed -i "s/MACRepeaterOuiMode=.*/MACRepeaterOuiMode=/g" $CONFILE
+			fi			
+			;;
 		*)
-			sed -i "s/ApCliEnable=.*/ApCliEnable=0/g" $CONFILE
+			if [ $_DAT == 1 ]; then			
+				sed -i "s/ApCliEnable=.*/ApCliEnable=0/g" $CONFILE
 
-			sed -i "s/AuthMode=.*/AuthMode=$authmode/g" $CONFILE
-			sed -i "s/EncrypType=.*/EncrypType=$encrtype/g" $CONFILE
-			sed -i "s/SSID$VNO=.*/SSID$VNO=$ssid/g" $CONFILE
-			sed -i "s/WPAPSK$VNO=.*/WPAPSK$VNO=$wpapsk/g" $CONFILE
+				sed -i "s/AuthMode=.*/AuthMode=$authmode/g" $CONFILE
+				sed -i "s/EncrypType=.*/EncrypType=$encrtype/g" $CONFILE
+				sed -i "s/SSID$VNO=.*/SSID$VNO=$ssid/g" $CONFILE
+				sed -i "s/WPAPSK$VNO=.*/WPAPSK$VNO=$wpapsk/g" $CONFILE
 
-			sed -i "s/Key1Type=.*/Key1Type=0/g" $CONFILE
-			sed -i "s/Key1Str$VNO=.*/Key1Str$VNO=$key1/g" $CONFILE
-			sed -i "s/Key2Type=.*/Key2Type=0/g" $CONFILE
-			sed -i "s/Key2Str$VNO=.*/Key2Str$VNO=$key2/g" $CONFILE
-			sed -i "s/Key3Type=.*/Key3Type=0/g" $CONFILE
-			sed -i "s/Key3Str$VNO=.*/Key3Str$VNO=$key3/g" $CONFILE
-			sed -i "s/Key4Type=.*/Key4Type=0/g" $CONFILE
-			sed -i "s/Key4Str$VNO=.*/Key4Str$VNO=$key4/g" $CONFILE
+				sed -i "s/Key1Type=.*/Key1Type=0/g" $CONFILE
+				sed -i "s/Key1Str$VNO=.*/Key1Str$VNO=$key1/g" $CONFILE
+				sed -i "s/Key2Type=.*/Key2Type=0/g" $CONFILE
+				sed -i "s/Key2Str$VNO=.*/Key2Str$VNO=$key2/g" $CONFILE
+				sed -i "s/Key3Type=.*/Key3Type=0/g" $CONFILE
+				sed -i "s/Key3Str$VNO=.*/Key3Str$VNO=$key3/g" $CONFILE
+				sed -i "s/Key4Type=.*/Key4Type=0/g" $CONFILE
+				sed -i "s/Key4Str$VNO=.*/Key4Str$VNO=$key4/g" $CONFILE
+			fi
 		;;
 	esac
 
@@ -195,6 +201,7 @@ configure_vif() {
 	uci set wireless.$vif.ifname=$iface
 
 	vif_settings $vif $iface
+
 
 	_VIFNUM=$((_VIFNUM+1))
 }
@@ -276,28 +283,30 @@ wdev_settings() {
 		;;
 	esac
 
-	sed -i "s/BssidNum=.*/BssidNum=$_VIFNUM/g" $CONFILE
-	sed -i "s/CountryRegion=.*/CountryRegion=1/g" $CONFILE
-	sed -i "s/CountryRegionABand=.*/CountryRegionABand=1/g" $CONFILE
+	if [ $_DAT == 1 ]; then
+		sed -i "s/BssidNum=.*/BssidNum=$_VIFNUM/g" $CONFILE
+		sed -i "s/CountryRegion=.*/CountryRegion=1/g" $CONFILE
+		sed -i "s/CountryRegionABand=.*/CountryRegionABand=1/g" $CONFILE
 
-	sed -i "s/CountryCode=.*/CountryCode=$country_code/g" $CONFILE
-	sed -i "s/RadioOn=.*/RadioOn=$radio/g" $CONFILE
-	sed -i "s/Channel=.*/Channel=$channel/g" $CONFILE
-	sed -i "s/AutoChannelSelect=.*/AutoChannelSelect=$autoch/g" $CONFILE
-	sed -i "s/AutoChannelSkipList=.*/AutoChannelSkipList=$autochskplist/g" $CONFILE
-	sed -i "s/WirelessMode=.*/WirelessMode=$wirelessmode/g" $CONFILE
-	sed -i "s/DfsEnable=.*/DfsEnable=$isac/g" $CONFILE
-	sed -i "s/ITxBfEn=.*/ITxBfEn=$beamforming/g" $CONFILE
-	sed -i "s/MaxStaNum=.*/MaxStaNum=$maxassoc/g" $CONFILE
-	sed -i "s/HT_BW=.*/HT_BW=$htbw/g" $CONFILE
-	sed -i "s/VHT_BW=.*/VHT_BW=$vhtbw/g" $CONFILE
+		sed -i "s/CountryCode=.*/CountryCode=$country_code/g" $CONFILE
+		sed -i "s/RadioOn=.*/RadioOn=$radio/g" $CONFILE
+		sed -i "s/Channel=.*/Channel=$channel/g" $CONFILE
+		sed -i "s/AutoChannelSelect=.*/AutoChannelSelect=$autoch/g" $CONFILE
+		sed -i "s/AutoChannelSkipList=.*/AutoChannelSkipList=$autochskplist/g" $CONFILE
+		sed -i "s/WirelessMode=.*/WirelessMode=$wirelessmode/g" $CONFILE
+		sed -i "s/DfsEnable=.*/DfsEnable=$isac/g" $CONFILE
+		sed -i "s/ITxBfEn=.*/ITxBfEn=$beamforming/g" $CONFILE
+		sed -i "s/MaxStaNum=.*/MaxStaNum=$maxassoc/g" $CONFILE
+		sed -i "s/HT_BW=.*/HT_BW=$htbw/g" $CONFILE
+		sed -i "s/VHT_BW=.*/VHT_BW=$vhtbw/g" $CONFILE
 
-	sed -i "s/IgmpSnEnable=.*/IgmpSnEnable=1/g" $CONFILE
+		sed -i "s/IgmpSnEnable=.*/IgmpSnEnable=1/g" $CONFILE
 
-	#sed -i "s/ApCliWirelessMode=.*/ApCliWirelessMode=$wirelessmode/g" $CONFILE
+		#sed -i "s/ApCliWirelessMode=.*/ApCliWirelessMode=$wirelessmode/g" $CONFILE
 
-	config_get bandsteering status bandsteering "0"
-	sed -i "s/BandSteering=.*/BandSteering=$bandsteering/g" $CONFILE
+		config_get bandsteering status bandsteering "0"
+		sed -i "s/BandSteering=.*/BandSteering=$bandsteering/g" $CONFILE
+	fi
 }
 
 setup_wifi_device() {
@@ -463,6 +472,9 @@ case "$_ACTION" in
 	;;
 	reload|restart|up)
 		_RELOAD=1
+		if [ "$2" == "nodat" ]; then
+			_DAT=0
+		fi
 	;;
 esac
 

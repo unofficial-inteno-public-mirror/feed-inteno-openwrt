@@ -24,7 +24,7 @@ wpsbutton_action () {
 		config_get wps_pbc "$1" wps_pbc "1"
 		if [ "$mode" == "ap" -a "$wps_pbc" == "1" -a -n "$ifname" ] ; then
 			iwpriv $ifname set WscConfMode=4
-			iwpriv $ifname set WscConfStatus=1
+			iwpriv $ifname set WscConfStatus=2
 			iwpriv $ifname set WscMode=2
 			iwpriv $ifname set WscGetConf=1
 		fi
@@ -50,9 +50,10 @@ get_wifi_wet_info() {
 activate_wps_enrollee() {
 	local apclif="$(get_wifi_wet_info ifname)"
 
+	iwpriv $apclif set ApCliEnable=0
 	iwpriv $apclif set WscConfMode=1
-	iwpriv $apclif set WscConfStatus=1
 	iwpriv $apclif set WscMode=2
+	iwpriv $apclif set ApCliEnable=1	
 	iwpriv $apclif set WscGetConf=1
 }
 
@@ -81,7 +82,7 @@ wpscbutton_action () {
 		echo "Restarting network services" > /dev/console
 		ubus call network reload
 		#ifup "$(get_wifi_wet_info network)"
-		wifi reload
+		wifi reload nodat
 		sleep 5
 		ubus call router.network reload
 		echo "Starting WPS PBC client mode" > /dev/console

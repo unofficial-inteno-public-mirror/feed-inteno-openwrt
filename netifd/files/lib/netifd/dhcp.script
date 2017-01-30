@@ -82,7 +82,7 @@ setup_interface () {
 	fi
 
 	if [ -f /etc/config/provisioning -a -f /sbin/iup ]; then
-		iup "{ \
+		iup -v -v --dhcp-options "{ \
 			'interface':'$INTERFACE', \
 			'privopt224':'$privopt224', \
 			'privopt225':'$privopt225', \

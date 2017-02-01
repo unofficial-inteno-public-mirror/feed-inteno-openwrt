@@ -344,7 +344,7 @@ bring_wifi() {
 }
 
 convert_macros() {
-	local BMAC=$(fw_printenv | grep 'ethaddr=' | cut -d'=' -f2 | tr -d ':')
+	local BMAC=$(db -q get hw.board.BaseMacAddr | tr -d ':')
 	local MAC=$(printf "%X\n" $((0x$BMAC)))
 	local BSSID=$(printf "%X\n" $((0x$BMAC + 2)))
 	local WPAKEY="$(db get hw.board.wpaKey 2>/dev/null)"

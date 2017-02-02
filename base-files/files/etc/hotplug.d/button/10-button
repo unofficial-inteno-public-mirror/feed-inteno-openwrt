@@ -75,20 +75,51 @@ wpscbutton_action () {
 		activate_wps_enrollee
 	else
 		ubus call leds set  '{"state" : "test"}'
+
+		echo "Switching to 'repeater' mode" > /dev/console
+
+		mkdir -p /tmp/netmode_config_backup
+		cp -af /etc/config/* /tmp/netmode_config_backup/
+
 		uci set netmode.setup.curmode=repeater
 		uci set netmode.repeater.reboot="0"
 		uci commit netmode
 		/etc/init.d/netmode reload
+
 		echo "Restarting network services" > /dev/console
 		ubus call network reload
-		#ifup "$(get_wifi_wet_info network)"
 		wifi reload nodat
 		sleep 5
 		ubus call router.network reload
+
 		echo "Starting WPS PBC client mode" > /dev/console
 		activate_wps_enrollee
-		sleep 20
+		ubus -t 30 listen wifi.wps | \
+		while read event; do
+			json_load "$event"
+			json_select wifi.wps
+			json_get_var state state
+			if [ "$state" == "success" ]; then
+				touch /tmp/repeater_mode_success
+				break
+			fi
+		done
 		ubus call leds set  '{"state" : "normal"}'
+
+		[ -f /tmp/repeater_mode_success ] && {
+			rm -f /tmp/repeater_mode_success
+			return
+		}
+
+		echo "Could not switch to 'repeater' mode; going back to '$cur_mode' mode" > /dev/console
+		uci set netmode.setup.curmode="$cur_mode"
+		cp -af /tmp/netmode_config_backup/* /etc/config/
+		rm -rf /tmp/netmode_config_backup
+
+		echo "Restarting network services" > /dev/console
+		ubus call network reload
+		wifi reload
+		ubus call router.network reload
 	fi
 }
 

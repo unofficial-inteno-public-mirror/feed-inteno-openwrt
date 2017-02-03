@@ -34,7 +34,7 @@ config wifi-iface
 	option device   rai0
 	option network  lan
 	option mode     ap
-	option ssid     Inteno-$BSSID4-5G
+	option ssid     Inteno-$BSSID4
 	option encryption psk2
 	option key	$WPAKEY
 

@@ -81,12 +81,16 @@ wpscbutton_action () {
 		mkdir -p /tmp/netmode_config_backup
 		cp -af /etc/config/* /tmp/netmode_config_backup/
 
-		echo "Restarting network services" > /dev/console
-
 		uci set netmode.setup.curmode=repeater
 		uci set netmode.repeater.reboot="0"
 		uci commit netmode
 		/etc/init.d/netmode reload
+
+		echo "Restarting network services" > /dev/console
+		ubus call network reload
+		wifi reload nodat
+		sleep 5
+		ubus call router.network reload
 
 		echo "Starting WPS PBC client mode" > /dev/console
 		activate_wps_enrollee

@@ -466,7 +466,12 @@ case "$_ACTION" in
 	;;
 	import)
 		wifi_import_settings "$2"
-		exit
+		if [ "$3" == "reload" ]; then
+			_RELOAD=1
+			_DAT=0
+		else
+			exit
+		fi
 	;;
 	toggle)
 		exit

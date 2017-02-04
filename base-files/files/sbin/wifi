@@ -441,6 +441,7 @@ wifi_import_settings()
 
 case "$_ACTION" in
 	detect)
+		convert_macros
 		exit
 	;;
 	disable|enable)

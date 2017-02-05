@@ -426,6 +426,7 @@ wifi_import_settings()
 			iwpriv $ifname set ApCliEncrypType="$encrtype"
 			iwpriv $ifname set ApCliWPAPSK="$newkey"
 			iwpriv $ifname set ApCliEnable=1
+			iwpriv $ifname set ApCliAutoConnect=1
 		}
 	}
 
@@ -467,6 +468,7 @@ case "$_ACTION" in
 	import)
 		wifi_import_settings "$2"
 		if [ "$3" == "reload" ]; then
+			ubus call network reload
 			_RELOAD=1
 			_DAT=0
 		else

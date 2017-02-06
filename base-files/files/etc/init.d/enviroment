@@ -2,6 +2,8 @@
 
 START=10
 USE_PROCD=1
+EXTRA_COMMANDS="macro"
+EXTRA_HELP="        macro   convert options to macro"
 
 handle_threads()
 {
@@ -27,7 +29,9 @@ handle_passwords()
 	done
 }
 
-handle_configs()
+local configs_to_macro="passwords network wireless system cwmp provisioning"
+
+convert_from_macro()
 {
 	local BMAC=$(cat /proc/nvram/BaseMacAddr | tr '[a-z]' '[A-Z]')
 	BMAC=${BMAC// /}
@@ -53,9 +57,7 @@ handle_configs()
 	local wpakey="${WPAKEY:-1234567890}"
 	local hardwareid=$HWVER-$(echo $RMODEL | sed -r 's;.+-(.+);\1;')
 
-	local configs="passwords network wireless system cwmp provisioning"
-
-	for config in $configs; do
+	for config in $configs_to_macro; do
 		if [ -f /etc/config/$config ]; then
 			grep -q "\$MAC6" /etc/config/$config && sed -i "s/\$MAC6/$mac6/g" /etc/config/$config
 			grep -q "\$MAC4" /etc/config/$config && sed -i "s/\$MAC4/$mac4/g" /etc/config/$config
@@ -75,6 +77,58 @@ handle_configs()
 			[ "$config" == "wireless" ] && grep -q "pskmixedpsk2" /etc/config/$config && sed -i "s/pskmixedpsk2/mixed-psk/g" /etc/config/$config
 		fi
 	done
+}
+
+convert_to_macro()
+{
+	local BMAC=$(cat /proc/nvram/BaseMacAddr | tr '[a-z]' '[A-Z]')
+	BMAC=${BMAC// /}
+	local MAC=$(printf "%X\n" $((0x$BMAC)))
+	local BSSID=$(printf "%X\n" $((0x$BMAC + 2)))
+	local WPAKEY=$(db get hw.board.wpaKey)
+	local SERIALNR=$(db get hw.board.serialNumber)
+	local HWVER=$(db get hw.board.hardwareVersion)
+	local RMODEL=$(db get hw.board.routerModel)
+	local DESKEY=$(db get hw.board.desKey)
+	local IOPVER=$(db get hw.board.iopVersion)
+	local IOPHOSTNAME=${IOPVER//[!a-zA-Z0-9-]/-} # hostname as in RFC 1035
+
+	local oid=${BMAC:0:6}
+	local mac=$BMAC
+	local mac2=$(echo -n $MAC | tail -c 2)
+	local mac4=$(echo -n $MAC | tail -c 4)
+	local mac6=$(echo -n $MAC | tail -c 6)
+	local bssid=$BSSID
+	local bssid2=$(echo -n $BSSID | tail -c 2)
+	local bssid4=$(echo -n $BSSID | tail -c 4)
+	local bssid6=$(echo -n $BSSID | tail -c 6)
+	local wpakey="${WPAKEY:-1234567890}"
+	local hardwareid=$HWVER-$(echo $RMODEL | sed -r 's;.+-(.+);\1;')
+
+	for config in $configs_to_macro; do
+		if [ -f /etc/config/$config ]; then
+			grep -q "$mac6" /etc/config/$config && sed -i "s/$mac6/\$MAC6/g" /etc/config/$config
+			grep -q "$mac4" /etc/config/$config && sed -i "s/$mac4/\$MAC4/g" /etc/config/$config
+			grep -q "$mac2" /etc/config/$config && sed -i "s/$mac2/\$MAC2/g" /etc/config/$config
+			grep -q "$mac" /etc/config/$config && sed -i "s/$mac/\$MAC/g" /etc/config/$config
+			grep -q "$bssid6" /etc/config/$config && sed -i "s/$bssid6/\$BSSID6/g" /etc/config/$config
+			grep -q "$bssid4" /etc/config/$config && sed -i "s/$bssid4/\$BSSID4/g" /etc/config/$config
+			grep -q "$bssid2" /etc/config/$config && sed -i "s/$bssid2/\$BSSID2/g" /etc/config/$config
+			grep -q "$bssid" /etc/config/$config && sed -i "s/$bssid/\$BSSID/g" /etc/config/$config
+			grep -q "$wpakey" /etc/config/$config && sed -i "s/$wpakey/\$WPAKEY/g" /etc/config/$config
+			grep -q "$DESKEY" /etc/config/$config && sed -i "s/$DESKEY/\$DESKEY/g" /etc/config/$config
+			grep -q "$SERIALNR" /etc/config/$config && sed -i "s/$SERIALNR/\$SER/g" /etc/config/$config
+			grep -q "$oid" /etc/config/$config && sed -i "s/$oid/\$OUI/g" /etc/config/$config
+			grep -q "$hardwareid" /etc/config/$config && sed -i "s/$hardwareid/\$HARDWAREID/g" /etc/config/$config
+			grep -q "$IOPVER" /etc/config/$config && sed -i "s/$IOPVER/\$IOPVER/g" /etc/config/$config
+			grep -q "$IOPHOSTNAME" /etc/config/$config && sed -i "s/$IOPHOSTNAME/\$IOPHOSTNAME/g" /etc/config/$config
+		fi
+	done
+}
+
+macro()
+{
+	convert_to_macro
 }
 
 handle_upgrade_count() {
@@ -172,10 +226,10 @@ boot() {
 	handle_openwrtversion
 	handle_passwords
 	handle_backup
-	handle_configs
+	convert_from_macro
 }
 
 start_service() {
-        handle_configs
+        convert_from_macro
 }
 

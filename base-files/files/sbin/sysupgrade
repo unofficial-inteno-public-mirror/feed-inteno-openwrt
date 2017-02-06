@@ -250,63 +250,13 @@ include /lib/upgrade
 
 [ "$1" = "nand" ] && nand_upgrade_stage2 $@
 
-handle_etc() {
-	local BMAC=$(cat /proc/nvram/BaseMacAddr | tr '[a-z]' '[A-Z]')
-	BMAC=${BMAC// /}
-	local MAC=$(printf "%X\n" $((0x$BMAC)))
-	local BSSID=$(printf "%X\n" $((0x$BMAC + 2)))
-	local WPAKEY=$(cat /proc/nvram/WpaKey)
-        local SERIALNR=$(cat /proc/nvram/SerialNumber)
-        local HWVER=$(db get hw.board.hardwareVersion)
-        local RMODEL=$(db get hw.board.routerModel)
-        local DESKEY=$(db get hw.board.desKey)
-
-	local oid=${BMAC:0:6}
-	local mac=$BMAC
-	local mac2=${MAC:8:2}
-	local mac4=${MAC:6:4}
-	local mac6=${MAC:4:6}
-	local bssid=$BSSID
-	local bssid2=${BSSID:8:2}
-	local bssid4=${BSSID:6:4}
-	local bssid6=${BSSID:4:6}
-	local wpakey=$WPAKEY
-	local hardwareid=$HWVER-$(echo $RMODEL | sed -r 's;.+-(.+);\1;')
-
-	local configs="passwords network wireless system cwmp provisioning"
-
-	if [ "$1" == "1" ]; then
-		mv /etc/config/broadcom /tmp/etc_broadcom 2>/dev/null
-		for config in $configs; do
-			if [ -f /etc/config/$config ]; then
-				cp /etc/config/$config /tmp/etc_$config
-				sed -i "s/$mac6/\$MAC6/g" /etc/config/$config
-				sed -i "s/$mac4/\$MAC4/g" /etc/config/$config
-				#sed -i "s/$mac2/\$MAC2/g" /etc/config/$config
-				sed -i "s/$mac/\$MAC/g" /etc/config/$config
-				sed -i "s/$bssid6/\$BSSID6/g" /etc/config/$config
-				sed -i "s/$bssid4/\$BSSID4/g" /etc/config/$config
-				#sed -i "s/$bssid2/\$BSSID2/g" /etc/config/$config
-				sed -i "s/$bssid/\$BSSID/g" /etc/config/$config
-				sed -i "s/$wpakey/\$WPAKEY/g" /etc/config/$config
-				sed -i "s/$DESKEY/\$DESKEY/g" /etc/config/$config
-				sed -i "s/$SERIALNR/\$SER/g" /etc/config/$config
-				[ "$config" == "cwmp" ] && sed -i "s/$oid/\$OUI/g" /etc/config/$config
-				#sed -i "s/$hardwareid/\$HARDWAREID/g" /etc/config/$config
-			fi
-		done
-	else
-		for config in $configs; do
-			mv /tmp/etc_$config /etc/config/$config 2>/dev/null
-		done
-		mv /tmp/etc_broadcom /etc/config/broadcom 2>/dev/null
-	fi
-}
-
 do_save_conffiles() {
 	local conf_tar="${1:-$CONF_TAR}"
 
-	handle_etc 1
+	local tmpfolder="/tmp/__backup_configs__"
+	mkdir -p $tmpfolder
+	cp -rp /etc/config/* $tmpfolder/
+	/etc/init.d/enviroment macro
 
 	[ -z "$(rootfs_type)" ] && {
 		echo "Cannot save config while running from ramdisk."
@@ -334,7 +284,8 @@ do_save_conffiles() {
 			mv "$conf_tar.enc" "$conf_tar"
 		fi
 	fi
-	handle_etc 0
+	cp -rp $tmpfolder/* /etc/config/
+	rm -rf $tmpfolder
 
 	rm -f "$CONFFILES"
 }
@@ -342,7 +293,10 @@ do_save_conffiles() {
 do_save_selected_conffiles() {
 	local conf_tar="${1:-$CONF_TAR}"
 
-	handle_etc 1
+	local tmpfolder="/tmp/__backup_configs__"
+	mkdir -p $tmpfolder
+	cp -rp /etc/config/* $tmpfolder/
+	/etc/init.d/enviroment macro
 
 	save_selected() {
 		config_get keep "$1" keep "1"
@@ -373,13 +327,17 @@ do_save_selected_conffiles() {
 	fi
 	rm -f /tmp/selected_backup_files
 
-	handle_etc 0
+	cp -rp $tmpfolder/* /etc/config/
+	rm -rf $tmpfolder
 }
 
 do_save_conffiles_uci() {
 	local conf_tar="${1:-$CONF_TAR}"
 
-	handle_etc 1
+	local tmpfolder="/tmp/__backup_configs__"
+	mkdir -p $tmpfolder
+	cp -rp /etc/config/* $tmpfolder/
+	/etc/init.d/enviroment macro
 
 	[ -z "$(rootfs_type)" ] && {
 		echo "Cannot save config while running from ramdisk."
@@ -394,7 +352,8 @@ do_save_conffiles_uci() {
 	tar c${TAR_V}zf "$conf_tar" -C $TMPDIR $PROVFILE 2>/dev/null
 	rm -rf $TMPDIR/$PROVFILE
 
-	handle_etc 0
+	cp -rp $tmpfolder/* /etc/config/
+	rm -rf $tmpfolder
 }
 
 

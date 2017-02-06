@@ -792,6 +792,7 @@ default_do_upgrade() {
 	else
 		if [ "$SAVE_CONFIG" -eq 1 -a -z "$USE_REFRESH" ]; then
 			v "Writing File System with Saved Config ..."
+			/etc/init.d/enviroment macro
 			if [ $cfe_fs -eq 1 ]; then
 				mtd -j "$CONF_TAR" write $from -i 0x00010000 linux
 			else

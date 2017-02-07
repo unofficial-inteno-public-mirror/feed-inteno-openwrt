@@ -304,7 +304,7 @@ wdev_settings() {
 
 		#sed -i "s/ApCliWirelessMode=.*/ApCliWirelessMode=$wirelessmode/g" $CONFILE
 
-		config_get bandsteering status bandsteering "0"
+		config_get bandsteering bandsteering enabled "0"
 		sed -i "s/BandSteering=.*/BandSteering=$bandsteering/g" $CONFILE
 	fi
 }

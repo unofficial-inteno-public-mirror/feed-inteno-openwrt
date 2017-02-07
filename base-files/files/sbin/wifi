@@ -398,7 +398,7 @@ wifi_import_settings()
 			if [ -n "$newkey" ]; then
 				uci -q set wireless.$1.encryption="psk2"
 				uci -q set wireless.$1.cipher="ccmp"
-				iwpriv $ifname set AuthMode="WPAPSK"
+				iwpriv $ifname set AuthMode="WPA2PSK"
 				iwpriv $ifname set EncrypType="AES"
 			else
 				uci -q set wireless.$1.encryption=""

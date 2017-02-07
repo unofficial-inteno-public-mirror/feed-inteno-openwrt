@@ -32,7 +32,7 @@ config wifi-device  rai0
 	option hwmode   11ac
 	option htmode   VHT80
 	option country 'DE'
-	option beamforming 0
+	option beamforming 1
 
 config wifi-iface
 	option device   rai0

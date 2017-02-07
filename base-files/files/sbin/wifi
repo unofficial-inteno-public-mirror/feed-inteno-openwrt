@@ -548,7 +548,7 @@ if [ $_REPEATER -eq 1 ]; then
 else
 	killall -9 wificontrol >/dev/null 2>&1
 	# configure connected repeaters/extenders
-	#wificontrol -c &
+	wificontrol -c &
 fi
 
 [ "$(uci -q get wireless.ra0.disabled)"  == "1" ] && ubus call led.wifi_2g set '{"state":"off"}' || ubus call led.wifi_2g set '{"state":"ok"}'

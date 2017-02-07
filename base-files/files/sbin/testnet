@@ -32,17 +32,19 @@ test_connection() {
 }
 
 wan_have_ip() {
-    local port="eth0.2"
-    local addr=""
+	[ -d /sys/class/net/$port ] || return
+	ubus list led.wan >/dev/null 2>&1 || return
 
-    [ -d /sys/class/net/$port ] && addr=$(ip a show dev $port | grep "inet "| awk '{print $2}')
+	local port="eth0.2"
+	local addr=$(ip a show dev $port | grep "inet "| awk '{print $2}')
 
-    if [ -n "$addr" ]
-    then
-	wanip=1
-	ubus list led.wan >/dev/null 2>&1 && ubus call led.wan  set '{"state" : "ok"}'
-    fi
-    # dont set wan here status is set from hotplug, only set when ip is detected.
+	if [ -n "$addr" ]; then
+		wanip=1
+		ubus call led.wan  set '{"state" : "ok"}'
+	else
+		wanip=0
+	fi
+	# don't set wan here status is set from hotplug, only set when ip is detected.
 }
 
 internet_test() {
@@ -55,12 +57,15 @@ internet_test() {
 		ubus call led.internet  set '{"state" : "ok"}'
 		echo "{ \"online\" : true }" > /tmp/internet_connection_status
 	else
-		ubus call led.internet  set '{"state" : "off"}'
+		netcon=0
+		ubus call led.internet  set '{"state" : "error"}'
 		echo "{ \"online\" : false }" > /tmp/internet_connection_status
 	fi
 }
 
 iptvtest() {
+	ubus list led.ext >/dev/null 2>&1 && tvcon=1 || return
+
 	local dest="$(uci -q get system.@system[0].tvping_addr)"
 
 	test_connection $dest
@@ -69,6 +74,7 @@ iptvtest() {
 		tvcon=1
 		[ -n "$dest" ] && ubus call led.ext  set '{"state" : "ok"}'
 	else
+		tvcon=0
 		[ -n "$dest" ] && ubus call led.ext  set '{"state" : "off"}'
 	fi
 }
@@ -84,24 +90,28 @@ then
 	return 0
 fi
 
-for tm in 1 3 5 7
-do
-	if [[ $netcon -eq 1 && $tvcon -eq 1 && $wanip -eq 1 ]]; then
-		break
+netmode_check() {
+	local curmode="$(uci -q get netmode.setup.curmode)"
+	local uplinkband="$(uci -q get netmode.$curmode.uplink_band)"
+
+	echo "$uplinkband"
+}
+
+
+ubus call led.internet  set '{"enable" : 1}'
+
+while true; do
+	[ -n "$(netmode_check)" ] && break
+
+	[ $wanip -eq 0 ] && wan_have_ip
+	[ $netcon -eq 0 ] && internet_test
+	[ $tvcon -eq 0 ] && iptvtest
+
+	if [ $netcon -eq 1 ]; then
+		ubus send internet '{"status" : "online"}'
 	else
-		[ $wanip -eq 0 ] && wan_have_ip
-		[ $netcon -eq 0 ] && internet_test
-		[ $tvcon -eq 0 ] && iptvtest
-
-		sleep $tm
+		ubus send internet '{"status" : "offline"}'
 	fi
+
+	sleep 10
 done
-
-if [ $netcon -eq 1 ]; then
-	ubus send internet '{"status" : "online"}'
-	if ! pidof wanup >/dev/null; then
-		[ -f /sbin/wanup ] && /sbin/wanup $IFACE &
-	fi
-else
-	ubus send internet '{"status" : "offline"}'
-fi

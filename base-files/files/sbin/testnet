@@ -103,9 +103,9 @@ ubus call led.internet  set '{"enable" : 1}'
 while true; do
 	[ -n "$(netmode_check)" ] && break
 
-	[ $wanip -eq 0 ] && wan_have_ip
+	#[ $wanip -eq 0 ] && wan_have_ip
 	[ $netcon -eq 0 ] && internet_test
-	[ $tvcon -eq 0 ] && iptvtest
+	#[ $tvcon -eq 0 ] && iptvtest
 
 	if [ $netcon -eq 1 ]; then
 		ubus send internet '{"status" : "online"}'

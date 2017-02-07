@@ -211,7 +211,7 @@ wdev_settings() {
 	local device=$cfg
 	local country channel radio country_code disabled
 	local dfsc beamforming dfsc isac autoch autochskplist
-	local maxassoc bandwidth bwdef htbw vhtbw bandsteering
+	local maxassoc bandwidth bwdef htbw vhtbw bandsteering atf
 
 	case "$device" in
 		rai*)
@@ -238,6 +238,7 @@ wdev_settings() {
 	[ "$dfsc" == "1" ] && autochskplist=""
 	config_get beamforming $cfg beamforming "1"
 	config_get maxassoc $cfg maxassoc "32"
+	config_get atf $cfg atf "0"
 
 	[ "$isac" == "1" ] && bwdef="80" || bwdef="20"
 	config_get bandwidth $cfg bandwidth "$bwdef"
@@ -299,6 +300,7 @@ wdev_settings() {
 		sed -i "s/MaxStaNum=.*/MaxStaNum=$maxassoc/g" $CONFILE
 		sed -i "s/HT_BW=.*/HT_BW=$htbw/g" $CONFILE
 		sed -i "s/VHT_BW=.*/VHT_BW=$vhtbw/g" $CONFILE
+		sed -i "s/VOW_Airtime_Fairness_En=.*/VOW_Airtime_Fairness_En=$atf/g" $CONFILE
 
 		sed -i "s/IgmpSnEnable=.*/IgmpSnEnable=1/g" $CONFILE
 

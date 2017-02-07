@@ -74,7 +74,7 @@ wpscbutton_action () {
 	if [ "$cur_mode" == "repeater" ] ; then
 		activate_wps_enrollee
 	else
-		ubus call leds set  '{"state" : "test"}'
+		ubus call leds set  '{"state" : "allflash"}'
 
 		echo "Switching to 'repeater' mode" > /dev/console
 
@@ -92,6 +92,8 @@ wpscbutton_action () {
 		sleep 5
 		ubus call router.network reload
 
+		ubus call leds set  '{"state" : "normal"}'
+
 		echo "Starting WPS PBC client mode" > /dev/console
 		activate_wps_enrollee
 		ubus -t 30 listen wifi.wps | \
@@ -104,13 +106,14 @@ wpscbutton_action () {
 				break
 			fi
 		done
-		ubus call leds set  '{"state" : "normal"}'
+		ubus call led.wps set  '{"state" : "off"}'
 
 		[ -f /tmp/repeater_mode_success ] && {
 			rm -f /tmp/repeater_mode_success
 			return
 		}
 
+		ubus call leds set  '{"state" : "allflash"}'
 		echo "Could not switch to 'repeater' mode; going back to '$cur_mode' mode" > /dev/console
 		uci set netmode.setup.curmode="$cur_mode"
 		cp -af /tmp/netmode_config_backup/* /etc/config/
@@ -120,6 +123,7 @@ wpscbutton_action () {
 		ubus call network reload
 		wifi reload
 		ubus call router.network reload
+		ubus call leds set  '{"state" : "normal"}'
 	fi
 }
 

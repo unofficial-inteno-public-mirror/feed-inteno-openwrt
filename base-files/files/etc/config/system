@@ -1,12 +1,18 @@
 config system
-	option hostname	Inteno
-	option timezone	UTC
+	option timezone 'CET-1CEST,M3.5.0,M10.5.0/3'
+	option zonename 'Europe/Stockholm'
+	option conloglevel '7'
+	option cronloglevel '9'
+	option hostname 'Inteno'
+	option log_size '200'
 	option ttylogin	0
 
-config timeserver ntp
-	list server	0.openwrt.pool.ntp.org
-	list server	1.openwrt.pool.ntp.org
-	list server	2.openwrt.pool.ntp.org
-	list server	3.openwrt.pool.ntp.org
+config timeserver 'ntp'
 	option enabled 1
-	option enable_server 0
+	option enable_server '1'
+	list server 'ntp1.sth.netnod.se'
+	list server 'ntp1.gbg.netnod.se'
+
+config upgrade
+	option fw_find_ext '.y2'
+

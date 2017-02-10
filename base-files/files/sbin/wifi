@@ -386,13 +386,13 @@ wifi_import_settings()
 
 		[ "$autoconf" == "1" ] || return
 
-		if [ "$ssid" != "$newssid" ]; then
+		#if [ "$ssid" != "$newssid" ]; then
 			uci -q set wireless.$1.ssid="$newssid"
 			iwpriv $ifname set SSID="$newssid"
 			changed=1
-		fi
+		#fi
 
-		if [ "$key" != "$newkey" ]; then
+		#if [ "$key" != "$newkey" ]; then
 			uci -q set wireless.$1.key="$newkey"
 			iwpriv $ifname set WPAPSK="$newkey"
 			if [ -n "$newkey" ]; then
@@ -407,7 +407,7 @@ wifi_import_settings()
 				iwpriv $ifname set EncrypType="NONE"
 			fi
 			changed=1
-		fi
+		#fi
 
 		[ "$mode" == "sta" -o "$mode" == "wet" ] && {
 			clientmode=1
@@ -434,7 +434,7 @@ wifi_import_settings()
 
 	config_load wireless
 	config_foreach vif_update_settings wifi-iface
-	[ $changed -eq 1 ] || exit 0
+	#[ $changed -eq 1 ] || exit 0
 	uci commit wireless
 #	if [ $clientmode -eq 1 ]; then
 #		ifup $wetnet &

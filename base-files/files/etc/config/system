@@ -1,5 +1,5 @@
 config system
-	option hostname	OpenWrt
+	option hostname	Inteno
 	option timezone	UTC
 	option ttylogin	0
 

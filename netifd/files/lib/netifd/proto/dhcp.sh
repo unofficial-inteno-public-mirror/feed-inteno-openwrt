@@ -23,9 +23,48 @@ proto_dhcp_init_config() {
 	proto_config_add_string customroutes
 }
 
+get_interfaces() {
+	local net=$1
+	local netifaces="$(uci -q get network.$net.ifname)"
+
+	get_wif_ifaces() {
+		config_get disabled $1 disabled 0
+		[ "$disabled" == "1" ] && return
+		config_get ifname $1 ifname
+		[ -n "$ifname" ] && netifaces="$netifaces $ifname"
+	}
+
+	config_load wireless
+	config_foreach get_wif_ifaces wifi-iface
+
+	netifaces="$(echo $netifaces | sed 's/$/ /' | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+	echo $netifaces
+}
+
+fix_mac_addr() {
+	local iface=$1
+	local wanport=$(db -q get hw.board.ethernetWanPort)
+	case $iface in
+		br-*)
+			local net=${iface:3}
+			for dev in $(get_interfaces $net); do
+				case $dev in
+					apcli*)
+						mac="$(ifconfig $dev  | grep HWaddr | awk '{print$NF}')"
+						ifconfig $iface hw ether $mac 2>/dev/null
+						break
+					;;
+				esac
+			done
+		;;
+	esac
+}
+
 proto_dhcp_setup() {
 	local config="$1"
 	local iface="$2"
+
+	fix_mac_addr $iface
 
 	local ipaddr hostname clientid vendorid broadcast release reqopts iface6rd sendopts delegate zone6rd zone mtu6rd customroutes
 	json_get_vars ipaddr hostname clientid vendorid broadcast release reqopts iface6rd sendopts delegate zone6rd zone mtu6rd customroutes

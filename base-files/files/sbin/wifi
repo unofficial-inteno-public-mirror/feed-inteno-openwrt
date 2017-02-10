@@ -286,9 +286,10 @@ wdev_settings() {
 
 	if [ $_DAT == 1 ]; then
 		sed -i "s/BssidNum=.*/BssidNum=$_VIFNUM/g" $CONFILE
-		sed -i "s/CountryRegion=.*/CountryRegion=1/g" $CONFILE
-		sed -i "s/CountryRegionABand=.*/CountryRegionABand=1/g" $CONFILE
-
+		if [ ! -z $country_code ]; then
+			sed -i "s/CountryRegion=.*/CountryRegion=1/g" $CONFILE
+			sed -i "s/CountryRegionABand=.*/CountryRegionABand=1/g" $CONFILE
+		fi
 		sed -i "s/CountryCode=.*/CountryCode=$country_code/g" $CONFILE
 		sed -i "s/RadioOn=.*/RadioOn=$radio/g" $CONFILE
 		sed -i "s/Channel=.*/Channel=$channel/g" $CONFILE

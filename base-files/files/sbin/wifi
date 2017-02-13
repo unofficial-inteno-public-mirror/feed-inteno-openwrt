@@ -367,9 +367,8 @@ convert_macros() {
 
 wifi_import_settings()
 {
-	local ssid key autoconf
-	local newssid newkey
-	local authmode encrtype
+	local ssid key autoconf newssid newkey
+	local newenc newcipher authmode encrtype
 	local changed=0
 	local clientmode=0
 	local wetnet=
@@ -377,6 +376,18 @@ wifi_import_settings()
 	json_load "$1"
 	json_get_var newssid ssid
 	json_get_var newkey key
+
+	if [ -n "$newkey" ]; then
+		authmode="WPA2PSK"
+		encrtype="AES"
+		newenc="psk2"
+		newcipher="ccmp"
+	else
+		authmode="OPEN"
+		encrtype="NONE"
+		newenc=""
+		newcipher=""
+	fi
 
 	vif_update_settings() {
 		config_get ssid "$1" ssid
@@ -387,41 +398,39 @@ wifi_import_settings()
 
 		[ "$autoconf" == "1" ] || return
 
-		#if [ "$ssid" != "$newssid" ]; then
-			uci -q set wireless.$1.ssid="$newssid"
-			iwpriv $ifname set SSID="$newssid"
-			changed=1
-		#fi
+		case "$ifname" in
+			rai*|apclii*)
+				CONFILE=$RAI
+			;;
+			ra*|apcli*)
+				CONFILE=$RA
+			;;
+		esac
 
-		#if [ "$key" != "$newkey" ]; then
-			uci -q set wireless.$1.key="$newkey"
-			iwpriv $ifname set WPAPSK="$newkey"
-			if [ -n "$newkey" ]; then
-				uci -q set wireless.$1.encryption="psk2"
-				uci -q set wireless.$1.cipher="ccmp"
-				iwpriv $ifname set AuthMode="WPA2PSK"
-				iwpriv $ifname set EncrypType="AES"
-			else
-				uci -q set wireless.$1.encryption=""
-				uci -q set wireless.$1.cipher=""
-				iwpriv $ifname set AuthMode="OPEN"
-				iwpriv $ifname set EncrypType="NONE"
-			fi
-			changed=1
-		#fi
+		sed -i "s/AuthMode=.*/AuthMode=$authmode/g" $CONFILE
+		sed -i "s/EncrypType=.*/EncrypType=$encrtype/g" $CONFILE
+		sed -i "s/SSID1=.*/SSID1=$newssid/g" $CONFILE
+		sed -i "s/WPAPSK1=.*/WPAPSK1=$newkey/g" $CONFILE
+
+		uci -q set wireless.$1.ssid="$newssid"
+		iwpriv $ifname set SSID="$newssid"
+		uci -q set wireless.$1.key="$newkey"
+		iwpriv $ifname set WPAPSK="$newkey"
+		uci -q set wireless.$1.encryption="$newenc"
+		iwpriv $ifname set AuthMode="$authmode"
+		uci -q set wireless.$1.cipher="$newcipher"
+		iwpriv $ifname set EncrypType="$encrtype"
 
 		[ "$mode" == "sta" -o "$mode" == "wet" ] && {
 			clientmode=1
 
-			config_get wetnet "$1" network
+			#config_get wetnet "$1" network
 
-			if [ -n "$newkey" ]; then
-				authmode="WPA2PSK"
-				encrtype="AES"
-			else
-				authmode="OPEN"
-				encrtype="NONE"
-			fi
+			sed -i "s/ApCliEnable=.*/ApCliEnable=1/g" $CONFILE
+			sed -i "s/ApCliSsid=.*/ApCliSsid=$newssid/g" $CONFILE
+			sed -i "s/ApCliAuthMode=.*/ApCliAuthMode=$authmode/g" $CONFILE
+			sed -i "s/ApCliEncrypType=.*/ApCliEncrypType=$encrtype/g" $CONFILE
+			sed -i "s/ApCliWPAPSK=.*/ApCliWPAPSK=$newkey/g" $CONFILE
 
 			iwpriv $ifname set ApCliEnable=0
 			iwpriv $ifname set ApCliSsid="$newssid"
@@ -435,7 +444,6 @@ wifi_import_settings()
 
 	config_load wireless
 	config_foreach vif_update_settings wifi-iface
-	#[ $changed -eq 1 ] || exit 0
 	uci commit wireless
 #	if [ $clientmode -eq 1 ]; then
 #		ifup $wetnet &

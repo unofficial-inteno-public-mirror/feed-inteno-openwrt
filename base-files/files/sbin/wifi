@@ -497,6 +497,16 @@ case "$_ACTION" in
 	;;
 esac
 
+if uci show wireless | grep -q 'mode=.*wet.*'; then
+	# open a tcp socket and wait for
+	# master AP to push new configuration
+	pidof wificontrol >/dev/null || wificontrol -s &
+else
+	killall -9 wificontrol >/dev/null 2>&1
+	# configure connected repeaters/extenders
+	wificontrol -c &
+fi
+
 convert_macros
 bring_wifi down
 configure_wifi
@@ -549,16 +559,6 @@ setup_client_mode() {
 
 config_load wireless
 config_foreach setup_client_mode wifi-iface
-
-if [ $_REPEATER -eq 1 ]; then
-	# open a tcp socket and wait for
-	# master AP to push new configuration
-	pidof wificontrol >/dev/null || wificontrol -s &
-else
-	killall -9 wificontrol >/dev/null 2>&1
-	# configure connected repeaters/extenders
-	wificontrol -c &
-fi
 
 [ "$(uci -q get wireless.ra0.disabled)"  == "1" ] && ubus call led.wifi_2g set '{"state":"off"}' || ubus call led.wifi_2g set '{"state":"ok"}'
 [ "$(uci -q get wireless.rai0.disabled)" == "1" ] && ubus call led.wifi_5g set '{"state":"off"}' || ubus call led.wifi_5g set '{"state":"ok"}'

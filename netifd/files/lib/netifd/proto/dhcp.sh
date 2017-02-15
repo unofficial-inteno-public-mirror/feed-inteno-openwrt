@@ -46,6 +46,7 @@ fix_mac_addr() {
 	local wanport=$(db -q get hw.board.ethernetWanPort)
 	case $iface in
 		br-*)
+			echo 0 > /sys/devices/virtual/net/$iface/bridge/multicast_snooping
 			local net=${iface:3}
 			for dev in $(get_interfaces $net); do
 				case $dev in

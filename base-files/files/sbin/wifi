@@ -500,7 +500,10 @@ esac
 if uci show wireless | grep -q 'mode=.*wet.*'; then
 	# open a tcp socket and wait for
 	# master AP to push new configuration
-	killall -9 wificontrol >/dev/null 2>&1
+	pidof wificontrol >/dev/null && {
+		killall -9 wificontrol >/dev/null 2>&1
+		sleep 1
+	}
 	wificontrol -s &
 else
 	killall -9 wificontrol >/dev/null 2>&1

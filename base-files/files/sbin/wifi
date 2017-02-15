@@ -331,12 +331,14 @@ configure_wifi() {
 bring_wifi() {
 	local action="$1"
 	[ -n "$action" ] || return
+	local disabled=0
 	for rif in ra rai apcli apclii; do
 		for idx in 0 1 2 3; do
 			rxif="$rif$idx"
 			if uci show network | grep network.*ifname | tr -d "'" | grep -qw "$rxif"; then
 				if [ "$action" == "up" ]; then
-					ifconfig $rxif up 2>/dev/null
+					disabled=$(uci -q get wireless.$(uci -q get wireless.$(uci show wireless | grep "ifname=.*$rxif.*" | cut -d'.' -f2).device).disabled)
+					[ "$disabled" == "1" ] || ifconfig $rxif up 2>/dev/null
 				else
 					remove_from_networks $rxif
 					ifconfig $rxif down 2>/dev/null

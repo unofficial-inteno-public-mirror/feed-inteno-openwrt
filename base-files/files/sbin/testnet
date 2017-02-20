@@ -84,7 +84,7 @@ fi
 
 for tm in 1 3 5 7
 do
-	if [[ $netcon -eq 1 && $tvcon -eq 1 && $wanip -eq 1 ]]; then
+	if [ $netcon -eq 1 -a $tvcon -eq 1 ]; then
 		break
 	else
 		[ $wanip -eq 0 ] && wan_have_ip

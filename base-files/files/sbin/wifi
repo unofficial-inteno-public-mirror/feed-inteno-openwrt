@@ -495,6 +495,33 @@ wifi_import_settings()
 #	fi
 }
 
+band_steering() {
+	local enabled policy
+	local rssi_threshold bw_util
+
+	iwpriv ra0 set BndStrgEnable=0
+	iwpriv rai0 set BndStrgEnable=0
+
+	enabled="$(uci -q get wireless.bandsteering.enabled)"
+
+	[ "$enabled" == "1" ] || return 1
+
+	policy="$(uci -q get wireless.bandsteering.policy)"
+	policy=${policy:-0}
+	rssi_threshold="$(uci -q get wireless.bandsteering.rssi_threshold)"
+	rssi_threshold=${rssi_threshold:--75}
+	bw_util="$(uci -q get wireless.bandsteering.bw_util)"
+	bw_util=${bw_util:--60}
+
+	iwpriv ra0 set BndStrgEnable=1
+	iwpriv rai0 set BndStrgEnable=1
+
+	if [ "$policy" == "0" ]; then
+		iwpriv ra0 set BndStrgRssiLow=-100
+		iwpriv rai0 set BndStrgRssiLow=$rssi_threshold
+	fi
+}
+
 case "$_ACTION" in
 	detect)
 		add_missing_sections
@@ -573,6 +600,8 @@ convert_macros
 bring_wifi down
 configure_wifi
 bring_wifi up
+
+band_steering
 
 # register rlt_wifi with hw_nat module
 iwpriv rai0 set hw_nat_register=1

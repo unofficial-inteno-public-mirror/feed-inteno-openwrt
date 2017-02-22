@@ -362,6 +362,34 @@ bring_wifi() {
 	done
 }
 
+add_missing_sections() {
+	if ! uci -q get wireless.status; then
+		[ -f /etc/config/wireless ] || touch /etc/config/wireless
+		uci add wireless wifi-status
+		uci rename wireless.@wifi-status[-1]=status
+		uci set wireless.status.wlan=1
+		uci set wireless.status.wps=1
+		uci set wireless.status.schedule=0
+		uci set wireless.status.sched_status=0
+		uci commit wireless
+	fi
+
+	if ! uci -q get wireless.bandsteering; then
+		bstr=0
+		[ -f /etc/config/wireless ] || touch /etc/config/wireless && {
+			bstr="$(uci -q get wireless.status.bandsteering)"
+			bstr=${bstr:-0}
+			uci -q delete wireless.status.bandsteering
+		}
+
+		uci add wireless bandsteering
+		uci rename wireless.@bandsteering[-1]=bandsteering
+		uci set wireless.bandsteering.enabled=$bstr
+		uci set wireless.bandsteering.policy=0
+		uci commit wireless
+	fi
+}
+
 convert_macros() {
 	local BMAC=$(db -q get hw.board.BaseMacAddr | tr -d ':')
 	local MAC=$(printf "%X\n" $((0x$BMAC)))
@@ -469,6 +497,7 @@ wifi_import_settings()
 
 case "$_ACTION" in
 	detect)
+		add_missing_sections
 		convert_macros
 		exit
 	;;

@@ -61,8 +61,10 @@ find_in_network() {
 vif_settings() {
 	local cfg=$1
 	local iface=$2
-	local device ifname ssid encryption key encrtype authmode wpapsk
+	local device ifname ssid encryption key
+	local encrtype authmode wpapsk
 	local key key1 key2 key3 key4
+	local macfilter maclist macmode
 
 	config_get mode $cfg mode
 
@@ -108,6 +110,14 @@ vif_settings() {
 			authmode="WPA2"
 		;;
 	esac
+
+	config_get macfilter $cfg macfilter "0"
+	case $macfilter in
+		1) macmode=2 ;;
+		2) macmode=1 ;;
+		*) macmode=0 ;;
+	esac
+	maclist="$(uci -q get wireless.$cfg.maclist | tr ' ' ';')"
 
 	VNO=$((_VIFNUM + 1 ))
 
@@ -158,6 +168,10 @@ vif_settings() {
 				sed -i "s/Key3Str$VNO=.*/Key3Str$VNO=$key3/g" $CONFILE
 				sed -i "s/Key4Type=.*/Key4Type=0/g" $CONFILE
 				sed -i "s/Key4Str$VNO=.*/Key4Str$VNO=$key4/g" $CONFILE
+
+				BNO=$((VNO - 1))
+				sed -i "s/AccessPolicy$BNO=.*/AccessPolicy$BNO=$macmode/g" $CONFILE
+				sed -i "s/AccessControlList$BNO=.*/AccessControlList$BNO=$maclist/g" $CONFILE
 			fi
 		;;
 	esac

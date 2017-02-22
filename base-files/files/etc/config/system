@@ -5,7 +5,7 @@ config system
 	option cronloglevel '9'
 	option hostname 'Inteno'
 	option log_size '200'
-	option ttylogin	0
+	option ttylogin	1
 
 config timeserver 'ntp'
 	option enabled 1

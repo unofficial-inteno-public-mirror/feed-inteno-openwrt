@@ -1,0 +1,171 @@
+diff --git a/include/usage.h b/include/usage.h
+index 713b15f..306fca9 100644
+--- a/include/usage.h
++++ b/include/usage.h
+@@ -6086,6 +6086,7 @@
+      "\n	-F,--fqdn NAME		Ask server to update DNS mapping for NAME" \
+      "\n	-V,--vendorclass VENDOR	Vendor identifier (default 'udhcp VERSION')" \
+      "\n	-C,--clientid-none	Don't send MAC as client identifier" \
++     "\n	-l,--lease-mac MAC	Overwrite MAC in DHCP messages (default own MAC)" \
+ 	IF_UDHCP_VERBOSE( \
+      "\n	-v			Verbose" \
+ 	) \
+@@ -6123,6 +6124,7 @@
+      "\n	-F NAME		Ask server to update DNS mapping for NAME" \
+      "\n	-V VENDOR	Vendor identifier (default 'udhcp VERSION')" \
+      "\n	-C		Don't send MAC as client identifier" \
++     "\n	-l MAC		Overwrite MAC in DHCP messages (default own MAC)" \
+ 	IF_UDHCP_VERBOSE( \
+      "\n	-v		Verbose" \
+ 	) \
+diff --git a/networking/udhcp/dhcpc.c b/networking/udhcp/dhcpc.c
+index 4e1d0e1..e357589 100644
+--- a/networking/udhcp/dhcpc.c
++++ b/networking/udhcp/dhcpc.c
+@@ -48,6 +48,7 @@ static const char udhcpc_longopts[] ALIGN1 =
+ 	"timeout\0"        Required_argument "T"
+ 	"retries\0"        Required_argument "t"
+ 	"tryagain\0"       Required_argument "A"
++	"lease-mac\0"      Required_argument "l"
+ 	"syslog\0"         No_argument       "S"
+ 	"request-option\0" Required_argument "O"
+ 	"no-default-options\0" No_argument   "o"
+@@ -76,13 +77,14 @@ enum {
+ 	OPT_t = 1 << 13,
+ 	OPT_S = 1 << 14,
+ 	OPT_A = 1 << 15,
+-	OPT_O = 1 << 16,
+-	OPT_o = 1 << 17,
+-	OPT_x = 1 << 18,
+-	OPT_f = 1 << 19,
+-	OPT_B = 1 << 20,
++	OPT_l = 1 << 16,
++	OPT_O = 1 << 17,
++	OPT_o = 1 << 18,
++	OPT_x = 1 << 19,
++	OPT_f = 1 << 20,
++	OPT_B = 1 << 21,
+ /* The rest has variable bit positions, need to be clever */
+-	OPTBIT_B = 20,
++	OPTBIT_B = 21,
+ 	USE_FOR_MMU(             OPTBIT_b,)
+ 	IF_FEATURE_UDHCPC_ARPING(OPTBIT_a,)
+ 	IF_FEATURE_UDHCP_PORT(   OPTBIT_P,)
+@@ -619,7 +621,10 @@ static void init_packet(struct dhcp_packet *packet, char type)
+ 	secs = client_config.last_secs - client_config.first_secs;
+ 	packet->secs = htons(secs);
+ 
+-	memcpy(packet->chaddr, client_config.client_mac, 6);
++	memcpy(packet->chaddr,
++		client_config.lease_mac ?
++		client_config.lease_mac : client_config.client_mac,
++		6);
+ 	if (client_config.clientid)
+ 		udhcp_add_binary_option(packet, client_config.clientid);
+ }
+@@ -1271,7 +1276,7 @@ int udhcpc_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
+ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
+ {
+ 	uint8_t *message;
+-	const char *str_V, *str_h, *str_F, *str_r;
++	const char *str_V, *str_h, *str_F, *str_r, *str_l;
+ 	IF_FEATURE_UDHCPC_ARPING(const char *str_a = "2000";)
+ 	IF_FEATURE_UDHCP_PORT(char *str_P;)
+ 	void *clientid_mac_ptr;
+@@ -1303,7 +1308,7 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
+ 	/* O,x: list; -T,-t,-A take numeric param */
+ 	opt_complementary = "O::x::T+:t+:A+" IF_UDHCP_VERBOSE(":vv") ;
+ 	IF_LONG_OPTS(applet_long_options = udhcpc_longopts;)
+-	opt = getopt32(argv, "CV:H:h:F:i:np:qRr:s:T:t:SA:O:ox:fB"
++	opt = getopt32(argv, "CV:H:h:F:i:np:qRr:s:T:t:SA:l:O:ox:fB"
+ 		USE_FOR_MMU("b")
+ 		IF_FEATURE_UDHCPC_ARPING("a::")
+ 		IF_FEATURE_UDHCP_PORT("P:")
+@@ -1312,6 +1317,7 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
+ 		, &client_config.interface, &client_config.pidfile, &str_r /* i,p */
+ 		, &client_config.script /* s */
+ 		, &discover_timeout, &discover_retries, &tryagain_timeout /* T,t,A */
++		, &str_l /* l */
+ 		, &list_O
+ 		, &list_x
+ 		IF_FEATURE_UDHCPC_ARPING(, &str_a)
+@@ -1382,13 +1388,27 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
+ 		return 1;
+ 	}
+ 
++	client_config.lease_mac = NULL;
++	if (opt & OPT_l) {
++		log1("lease_mac string: \"%s\"", str_l);
++		client_config.lease_mac = (char *)malloc(6*sizeof(char)); // please free() me
++		client_config.lease_mac = ether_aton_r(str_l, (struct ether_addr *)client_config.lease_mac);
++		if (client_config.lease_mac)
++			log1("lease_mac set to \"%s\"", ether_ntoa(client_config.lease_mac));
++		else
++			log1("lease_mac: FAILED");
++	}
++
+ 	clientid_mac_ptr = NULL;
+ 	if (!(opt & OPT_C) && !udhcp_find_option(client_config.options, DHCP_CLIENT_ID)) {
+ 		/* not suppressed and not set, set the default client ID */
+ 		client_config.clientid = alloc_dhcp_option(DHCP_CLIENT_ID, "", 7);
+ 		client_config.clientid[OPT_DATA] = 1; /* type: ethernet */
+ 		clientid_mac_ptr = client_config.clientid + OPT_DATA+1;
+-		memcpy(clientid_mac_ptr, client_config.client_mac, 6);
++		memcpy(clientid_mac_ptr,
++			client_config.lease_mac ?
++			client_config.lease_mac : client_config.client_mac,
++			6);
+ 	}
+ 	if (str_V[0] != '\0') {
+ 		// can drop -V, str_V, client_config.vendorclass,
+@@ -1495,7 +1515,10 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
+ 				goto ret0; /* iface is gone? */
+ 			}
+ 			if (clientid_mac_ptr)
+-				memcpy(clientid_mac_ptr, client_config.client_mac, 6);
++				memcpy(clientid_mac_ptr,
++					client_config.lease_mac ?
++					client_config.lease_mac : client_config.client_mac,
++					6);
+ 
+ 			/* We will restart the wait in any case */
+ 			already_waited_sec = 0;
+@@ -1672,9 +1695,15 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
+ 		/* Ignore packets that aren't for us */
+ 		if (packet.hlen != 6
+ 		 || memcmp(packet.chaddr, client_config.client_mac, 6) != 0
++		 && memcmp(packet.chaddr, client_config.lease_mac, 6) != 0
+ 		) {
+ //FIXME: need to also check that last 10 bytes are zero
+ 			log1("chaddr does not match, ignoring packet"); // log2?
++			log1("chaddr \"%s\" does not match client_mac \"%s\" lease_mac \"%s\" ignoring packet",
++				packet.chaddr ? ether_ntoa(packet.chaddr) : "",
++				client_config.client_mac ? ether_ntoa(client_config.client_mac) : "",
++				client_config.lease_mac ? ether_ntoa(client_config.lease_mac) : ""
++				);
+ 			continue;
+ 		}
+ 
+@@ -1868,6 +1897,10 @@ int udhcpc_main(int argc UNUSED_PARAM, char **argv)
+ 		perform_release(server_addr, requested_ip);
+ 	retval = 0;
+  ret:
++	if (client_config.lease_mac) {
++		free(client_config.lease_mac);
++		client_config.lease_mac = NULL;
++	}
+ 	/*if (client_config.pidfile) - remove_pidfile has its own check */
+ 		remove_pidfile(client_config.pidfile);
+ 	return retval;
+diff --git a/networking/udhcp/dhcpc.h b/networking/udhcp/dhcpc.h
+index 9f423a5..822c076 100644
+--- a/networking/udhcp/dhcpc.h
++++ b/networking/udhcp/dhcpc.h
+@@ -17,6 +17,7 @@ struct client_config_t {
+ 	const char *script;             /* User script to run at dhcp events */
+ 	struct option_set *options;     /* list of DHCP options to send to server */
+ 	uint8_t *clientid;              /* Optional client id to use */
++	uint8_t *lease_mac;             /* Optional MAC used in DHCP messeges */
+ 	uint8_t *vendorclass;           /* Optional vendor class-id to use */
+ 	uint8_t *hostname;              /* Optional hostname to use */
+ 	uint8_t *fqdn;                  /* Optional fully qualified domain name to use */

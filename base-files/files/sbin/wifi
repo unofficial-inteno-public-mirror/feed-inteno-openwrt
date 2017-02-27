@@ -365,13 +365,13 @@ bring_wifi() {
 add_missing_sections() {
 	if ! uci -q get wireless.status; then
 		[ -f /etc/config/wireless ] || touch /etc/config/wireless
-		uci add wireless wifi-status
-		uci rename wireless.@wifi-status[-1]=status
-		uci set wireless.status.wlan=1
-		uci set wireless.status.wps=1
-		uci set wireless.status.schedule=0
-		uci set wireless.status.sched_status=0
-		uci commit wireless
+		uci -q add wireless wifi-status
+		uci -q rename wireless.@wifi-status[-1]=status
+		uci -q set wireless.status.wlan=1
+		uci -q set wireless.status.wps=1
+		uci -q set wireless.status.schedule=0
+		uci -q set wireless.status.sched_status=0
+		uci -q commit wireless >/dev/null
 	fi
 
 	if ! uci -q get wireless.bandsteering; then
@@ -382,11 +382,11 @@ add_missing_sections() {
 			uci -q delete wireless.status.bandsteering
 		}
 
-		uci add wireless bandsteering
-		uci rename wireless.@bandsteering[-1]=bandsteering
-		uci set wireless.bandsteering.enabled=$bstr
-		uci set wireless.bandsteering.policy=0
-		uci commit wireless
+		uci -q add wireless bandsteering
+		uci -q rename wireless.@bandsteering[-1]=bandsteering
+		uci -q set wireless.bandsteering.enabled=$bstr
+		uci -q set wireless.bandsteering.policy=0
+		uci -q commit wireless >/dev/null
 	fi
 }
 
@@ -572,10 +572,9 @@ esac
 if uci show wireless | grep -q 'mode=.*wet.*'; then
 	# open a tcp socket and wait for
 	# master AP to push new configuration
-	pidof wificontrol >/dev/null && {
-		killall -9 wificontrol >/dev/null 2>&1
-		sleep 1
-	}
+	killall -15 wificontrol >/dev/null 2>&1
+	killall -15 wificontrol >/dev/null 2>&1
+	sleep 1
 	wificontrol -s &
 else
 	killall -9 wificontrol >/dev/null 2>&1

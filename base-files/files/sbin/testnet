@@ -118,7 +118,7 @@ while true; do
 			ubus send internet '{"status" : "offline"}'
 		fi
 	else
-		[ $(pidof wificontrol | wc -w) -gt 1 ] && {
+		[ $(pidof wificontrol | wc -w) -eq 1 ] || {
 			killall -15 wificontrol >/dev/null 2>&1
 			sleep 1
 			wificontrol -s &

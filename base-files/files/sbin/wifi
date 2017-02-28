@@ -371,7 +371,7 @@ add_missing_sections() {
 		uci -q set wireless.status.wps=1
 		uci -q set wireless.status.schedule=0
 		uci -q set wireless.status.sched_status=0
-		uci -q commit wireless >/dev/null
+		uci -q commit wireless
 	fi
 
 	if ! uci -q get wireless.bandsteering; then
@@ -386,7 +386,7 @@ add_missing_sections() {
 		uci -q rename wireless.@bandsteering[-1]=bandsteering
 		uci -q set wireless.bandsteering.enabled=$bstr
 		uci -q set wireless.bandsteering.policy=0
-		uci -q commit wireless >/dev/null
+		uci -q commit wireless
 	fi
 }
 
@@ -524,7 +524,7 @@ band_steering() {
 
 case "$_ACTION" in
 	detect)
-		add_missing_sections
+		#add_missing_sections
 		convert_macros
 		exit
 	;;

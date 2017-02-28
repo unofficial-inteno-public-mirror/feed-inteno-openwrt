@@ -48,6 +48,14 @@ wan_have_ip() {
 }
 
 internet_test() {
+	local link=$(swconfig dev switch0 port 0 get link | awk '{print$2}' | cut -d':' -f2)
+
+	[ "$link" == "down" ] && {
+		ubus call led.internet  set '{"state" : "off"}'
+		echo "{ \"online\" : false }" > /tmp/internet_connection_status
+		return
+	}
+
 	local dest="$(uci -q get system.@system[0].netping_addr)"
 
 	test_connection $dest
@@ -102,10 +110,7 @@ ubus call led.internet  set '{"enable" : 1}'
 
 while true; do
 	if [ -z "$(netmode_check)" ]; then
-
-		#[ $wanip -eq 0 ] && wan_have_ip
 		internet_test
-		#[ $tvcon -eq 0 ] && iptvtest
 
 		if [ $netcon -eq 1 ]; then
 			ubus send internet '{"status" : "online"}'
@@ -114,5 +119,5 @@ while true; do
 		fi
 	fi
 
-	sleep 10
+	sleep 5
 done

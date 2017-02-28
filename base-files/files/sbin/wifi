@@ -945,11 +945,26 @@ configure_wifi() {
 	if [ $_REPEATER -eq 1 ]; then
 		# open a tcp socket and wait for
 		# master AP to push new configuration
-		pidof wificontrol >/dev/null || wificontrol -s &
+		killall -15 wificontrol >/dev/null 2>&1
+		sleep 1
+		wificontrol -s &
 	else
 		killall -9 wificontrol >/dev/null 2>&1
 		# configure connected repeaters/extenders
-		wificontrol -c &
+		ssid="$(uci -q get wireless.@wifi-iface[0].ssid)"
+		key="$(uci -q get wireless.@wifi-iface[0].key)"
+		json_load "$(ubus call router.network clients)"
+		_cno=1
+		while json_select client-$_cno; do
+			json_get_var assoclist assoclist
+			json_get_var connected connected
+			if [ -n "$assoclist" -a "$connected" == "1" ]; then
+				json_get_var ipaddr ipaddr
+				[ -n "$ipaddr" ] && wificontrol "$ipaddr" "$ssid" "$key"
+			fi
+			json_select ..
+			_cno=$((_cno+1))
+		done
 	fi
 
 	[ $_RELOAD -eq 0 ] && wlmngr_setupTPs

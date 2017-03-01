@@ -1,0 +1,128 @@
+config service 'cwmp'
+	option desc 'CWMP'
+	list file '/etc/config/cwmp'
+	list file '/etc/icwmpd/.icwmpd_backup_session.xml'
+
+config service 'ddns'
+	option desc 'DynDNS'
+	list file '/etc/config/ddns'
+
+config service 'dect'
+	option desc 'DECT'
+	list file '/etc/config/dect'
+	list file '/etc/dect/nvs'
+
+config service 'dropbear'
+	option desc 'Dropbear'
+	option conservative_keep 1
+	list file '/etc/config/dropbear'
+	list file '/etc/dropbear/*'
+
+config service 'firewall'
+	option desc 'Firewall'
+	option conservative_keep 1
+	list file '/etc/config/firewall'
+	list file '/etc/config/parental'
+
+config service 'ice'
+	option desc 'ICE'
+	option detail 'iopsys Communication Engine'
+	list file '/etc/config/ice'
+	list file '/etc/iopsys/server.ini'
+
+config service 'ipsec'
+	option desc 'IPsec'
+	list file '/etc/config/ipsec'
+	list file '/etc/config/ipsec_recipes'
+	list file '/etc/ipsec.d/*'
+	list file '/etc/ipsec.conf'
+	list file '/etc/ipsec.secrets'
+
+config service 'juci'
+	option desc 'WebGUI'
+	list file '/etc/config/juci'
+
+config service 'layer2'
+	option desc 'Layer2'
+	option detail 'Layer 2 Interfaces'
+	list file '/etc/config/layer2*'
+
+config service 'minidlna'
+	option desc 'miniDLNA'
+	list file '/etc/config/minidlna'
+
+config service 'multicast'
+	option desc 'Multicast'
+	option detail 'IGMP Proxy'
+	list file '/etc/config/mcpd'
+
+config service 'multiwan'
+	option desc 'MultiWAN'
+	list file '/etc/config/multiwan'
+
+config service 'network'
+	option desc 'Network'
+	option detail 'Interfaces, DHCP and DNS, Hostnames, Static Routes'
+	option conservative_keep 1
+	list file '/etc/config/network'
+	list file '/etc/config/dhcp'
+
+config service 'openvpn'
+	option desc 'OpenVPN'
+	list file '/etc/config/openvpn'
+	list file '/etc/config/openvpn_recipes'
+	list file '/etc/openvpn/*'
+
+config service 'password'
+	option desc 'Passwords'
+	option conservative_keep 1
+	list file '/etc/config/passwords'
+	list file '/etc/passwd'
+	list file '/etc/shadow'
+
+config service 'port_management'
+	option desc 'Port Management'
+	list file '/etc/config/ports'
+
+config service 'power_management'
+	option desc 'Power Management'
+	list file '/etc/config/power_mgmt'
+
+config service 'provisioning'
+	option desc 'Provisioning'
+	list file '/etc/config/provisioning'
+	list file '/etc/configchecksums'
+
+config service 'qos'
+	option desc 'QoS'
+	list file '/etc/config/qos'
+
+config service 'samba'
+	option desc 'Samba'
+	option detail 'Network Shares'
+	list file '/etc/config/samba'
+	list file '/etc/samba/*'
+
+config service 'snmp'
+	option desc 'SNMP'
+	list file '/etc/config/snmpd'
+
+config service 'system'
+	option desc 'System'
+	list file '/etc/config/system'
+
+config service 'upnp'
+	option desc 'UPNP'
+	option conservative_keep 1
+	list file '/etc/config/upnpd'
+
+config service 'voice'
+	option desc 'Voice'
+	list file '/etc/config/voice_client'
+	list file '/etc/asterisk/*'
+
+config service 'wireless'
+	option desc 'Wireless'
+	option conservative_keep 1
+	list file '/etc/config/wireless'
+

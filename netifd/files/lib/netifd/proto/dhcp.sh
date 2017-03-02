@@ -25,6 +25,7 @@ proto_dhcp_init_config() {
 proto_dhcp_setup() {
 	local config="$1"
 	local iface="$2"
+	local pidfile
 
 	local ipaddr hostname clientid vendorid broadcast reqopts iface6rd sendopts delegate zone6rd zone mtu6rd customroutes
 	json_get_vars ipaddr hostname clientid vendorid broadcast reqopts iface6rd sendopts delegate zone6rd zone mtu6rd customroutes
@@ -38,6 +39,11 @@ proto_dhcp_setup() {
 		append dhcpopts "-x $opt"
 	done
 
+	[ -z "$clientid" ] && pidfile="/var/run/udhcpc-$iface.pid"
+	# if there is a clientid per interface, use a more specific pidfile
+	# because more than 1 instance of udhcpc is expected to run on the same interface
+	[ -n "$clientid" ] && pidfile="/var/run/udhcpc-$config-$iface.pid"
+
 	[ "$broadcast" = 1 ] && broadcast="-B" || broadcast=
 	[ -n "$clientid" ] && clientid="-x 0x3d:${clientid//:/}" || clientid="-C"
 	[ -n "$iface6rd" ] && proto_export "IFACE6RD=$iface6rd"
@@ -50,7 +56,7 @@ proto_dhcp_setup() {
 
 	proto_export "INTERFACE=$config"
 	proto_run_command "$config" udhcpc -R \
-		-p /var/run/udhcpc-$iface.pid \
+		-p $pidfile \
 		-s /lib/netifd/dhcp.script \
 		-f -t 0 -i "$iface" \
 		${ipaddr:+-r $ipaddr} \

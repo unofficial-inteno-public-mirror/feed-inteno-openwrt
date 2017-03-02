@@ -841,7 +841,9 @@ wdev_settings() {
 		*)
 			chanspec="$channel"
 			if [ "$bandwidth" == "40" ]; then
-				chanspec=$(wlctl -i $device chanspecs -b $freq -w 40 | grep -w "$channel\"l\"\|$channel\"u\"")
+				channell="${channel}l"
+				channelu="${channel}u"
+				chanspec=$(wlctl -i $device chanspecs -b $freq -w 40 | grep -w "$channell\|$channelu" | awk '{print$1}')
 			elif [ "$bandwidth" == "80" ]; then
 				chanspec="$channel/80"
 			elif [ "$bandwidth" == "160" ]; then

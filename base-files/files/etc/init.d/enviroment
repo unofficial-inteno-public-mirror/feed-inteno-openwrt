@@ -57,8 +57,22 @@ convert_from_macro()
 	local wpakey="${WPAKEY:-1234567890}"
 	local hardwareid=$HWVER-$(echo $RMODEL | sed -r 's;.+-(.+);\1;')
 
+	local ethernetWanPort=$(db get hw.board.ethernetWanPort)
+	local WANMAC=$(ifconfig $ethernetWanPort | awk '/HWaddr/ {print $5}')
+	WANMAC=${WANMAC//:/}
+	WANMAC=$(printf "%012X\n" $((0x$WANMAC + 1)))
+	local WANMACplus1=$(printf "%012X\n" $((0x$WANMAC + 1)))
+	local WANMACplus2=$(printf "%012X\n" $((0x$WANMAC + 2)))
+	local WANMACplus3=$(printf "%012X\n" $((0x$WANMAC + 3)))
+	local WANMACplus4=$(printf "%012X\n" $((0x$WANMAC + 4)))
+
 	for config in $configs_to_macro; do
 		if [ -f /etc/config/$config ]; then
+			grep -q "clientid.*\$WANMACplus1" /etc/config/$config && sed -i "/clientid/ s/\$WANMACplus1/$WANMACplus1/g" /etc/config/$config
+			grep -q "clientid.*\$WANMACplus2" /etc/config/$config && sed -i "/clientid/ s/\$WANMACplus2/$WANMACplus2/g" /etc/config/$config
+			grep -q "clientid.*\$WANMACplus3" /etc/config/$config && sed -i "/clientid/ s/\$WANMACplus3/$WANMACplus3/g" /etc/config/$config
+			grep -q "clientid.*\$WANMACplus4" /etc/config/$config && sed -i "/clientid/ s/\$WANMACplus4/$WANMACplus4/g" /etc/config/$config
+			grep -q "clientid.*\$WANMAC" /etc/config/$config && sed -i "/clientid/ s/\$WANMAC/$WANMAC/g" /etc/config/$config
 			grep -q "\$MAC6" /etc/config/$config && sed -i "s/\$MAC6/$mac6/g" /etc/config/$config
 			grep -q "\$MAC4" /etc/config/$config && sed -i "s/\$MAC4/$mac4/g" /etc/config/$config
 			grep -q "\$MAC2" /etc/config/$config && sed -i "s/\$MAC2/$mac2/g" /etc/config/$config
@@ -105,8 +119,22 @@ convert_to_macro()
 	local wpakey="${WPAKEY:-1234567890}"
 	local hardwareid=$HWVER-$(echo $RMODEL | sed -r 's;.+-(.+);\1;')
 
+	local ethernetWanPort=$(db get hw.board.ethernetWanPort)
+	local WANMAC=$(ifconfig $ethernetWanPort | awk '/HWaddr/ {print $5}')
+	WANMAC=${WANMAC//:/}
+	WANMAC=$(printf "%012X\n" $((0x$WANMAC + 1)))
+	local WANMACplus1=$(printf "%012X\n" $((0x$WANMAC + 1)))
+	local WANMACplus2=$(printf "%012X\n" $((0x$WANMAC + 2)))
+	local WANMACplus3=$(printf "%012X\n" $((0x$WANMAC + 3)))
+	local WANMACplus4=$(printf "%012X\n" $((0x$WANMAC + 4)))
+
 	for config in $configs_to_macro; do
 		if [ -f /etc/config/$config ]; then
+			grep -q "clientid.*$WANMACplus1" /etc/config/$config && sed -i "/clientid/ s/$WANMACplus1/\$WANMACplus1/g" /etc/config/$config
+			grep -q "clientid.*$WANMACplus2" /etc/config/$config && sed -i "/clientid/ s/$WANMACplus2/\$WANMACplus2/g" /etc/config/$config
+			grep -q "clientid.*$WANMACplus3" /etc/config/$config && sed -i "/clientid/ s/$WANMACplus3/\$WANMACplus3/g" /etc/config/$config
+			grep -q "clientid.*$WANMACplus4" /etc/config/$config && sed -i "/clientid/ s/$WANMACplus4/\$WANMACplus4/g" /etc/config/$config
+			grep -q "clientid.*$WANMAC" /etc/config/$config && sed -i "/clientid/ s/$WANMAC/\$WANMAC/g" /etc/config/$config
 			grep -q "$mac6" /etc/config/$config && sed -i "s/$mac6/\$MAC6/g" /etc/config/$config
 			grep -q "$mac4" /etc/config/$config && sed -i "s/$mac4/\$MAC4/g" /etc/config/$config
 			grep -q "$mac2" /etc/config/$config && sed -i "s/$mac2/\$MAC2/g" /etc/config/$config

@@ -148,7 +148,6 @@ wifi_detect() {
 				bno=2
 				doth="0"
 				dfsc=""
-				ENCR="mixed-psk"
 			fi
 			populate_chanspecs $wl
 			if ! uci -q get wireless.$wl; then
@@ -860,6 +859,11 @@ wdev_settings() {
 
 	country_code=$(echo $country | awk -F'/' '{print$1}')
 	country_rev=$(echo $country | awk -F'/' '{print$2}')
+
+	[ "$country_code" == "US" -a "$bandwidth" == "160" ] && {
+		country_code="Q1"
+		country_rev="139"
+	}
 
 	[ "$frameburst" == "1" ] && frameburst=on || frameburst=off
 

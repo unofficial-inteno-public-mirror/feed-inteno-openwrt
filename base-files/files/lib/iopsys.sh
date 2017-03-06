@@ -125,6 +125,8 @@ build_minimal_rootfs() {
 
 	local ubi_ctrl_minor=$(awk -F= '/MINOR/ {print $2}' \
 				/sys/devices/virtual/misc/ubi_ctrl/uevent)
+	local ubi_dev_major=$(awk -F= '/MAJOR/ {print $2}' \
+				/sys/devices/virtual/ubi/ubi0/uevent)
 	mkdir dev
 	mknod -m 644 dev/kmsg     c   1 11
 	mknod -m 644 dev/mtd0     c  90  0
@@ -135,10 +137,10 @@ build_minimal_rootfs() {
 	mknod -m 644 dev/mtd5     c  90 10
 	mknod -m 644 dev/mtd6     c  90 12
 	mknod -m 644 dev/ubi_ctrl c  10 $ubi_ctrl_minor
-	mknod -m 644 dev/ubi0     c 254  0
-	mknod -m 644 dev/ubi0_0   c 254  1
-	mknod -m 644 dev/ubi0_1   c 254  2
-	mknod -m 644 dev/ubi0_2   c 254  3
+	mknod -m 644 dev/ubi0     c $ubi_dev_major  0
+	mknod -m 644 dev/ubi0_0   c $ubi_dev_major  1
+	mknod -m 644 dev/ubi0_1   c $ubi_dev_major  2
+	mknod -m 644 dev/ubi0_2   c $ubi_dev_major  3
 
 	mkdir lib
 	cp /lib/ubi_fixup.sh lib

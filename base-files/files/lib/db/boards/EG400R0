@@ -190,14 +190,15 @@ config gpio_led gpio_leds
         list leds EXT_green
 
 config gpio_led Status_green
-       option addr	30
+       option addr	106
        option active	low
        option mode	direct
 
 config gpio_led Status_red
-       option addr	29
+       option addr	107
        option active	low
        option mode	direct
+       option delay	1
 
 config gpio_led Wireless_green
        option addr	20

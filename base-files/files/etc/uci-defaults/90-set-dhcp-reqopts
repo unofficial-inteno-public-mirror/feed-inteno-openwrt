@@ -90,5 +90,5 @@ set_cwmp_reqopts() {
 	fi
 }
 
-set_iup_reqopts
-set_cwmp_reqopts
+[ -f /etc/config/provisioning ] && set_iup_reqopts
+[ -f /etc/config/cwmp ]	&& set_cwmp_reqopts

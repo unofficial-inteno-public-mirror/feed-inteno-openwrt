@@ -2,9 +2,16 @@
 # Copyright (C) 2006-2010 OpenWrt.org
 
 iopsys_rootfs_pivot() {
+	local ovlayTmp
+
 	[ "$pi_iopsys_skip_overlay" = "true" ] && return
 	echo "mounting and populating overlay"
-	fopivot /overlay /rom && pi_mount_skip_next=true
+
+	# Are we using a kernel with integraded filesystem overlay
+	# support? Older versions used patches where arguments differed.
+	ovlayTmp=""
+	grep -qE "overlay$" /proc/filesystems && ovlayTmp="/lib/overlay.tmp"
+	fopivot /overlay "$ovlayTmp" /rom && pi_mount_skip_next=true
 }
 
 boot_hook_add preinit_mount_root iopsys_rootfs_pivot

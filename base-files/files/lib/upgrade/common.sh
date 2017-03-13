@@ -37,7 +37,7 @@ install_bin() { # <file> [ <symlink> ... ]
 
 supivot() { # <new_root> <old_root>
 	/bin/mount | grep "on $1 type" 2>&- 1>&- || /bin/mount -o bind $1 $1
-	mkdir -p $1$2 $1/proc $1/sys $1/dev $1/tmp $1/overlay && \
+	mkdir -p $1$2 $1/proc $1/sys $1/dev $1/tmp $1/overlay $1/lib/overlay.tmp && \
 	/bin/mount -o noatime,move /proc $1/proc && \
 	pivot_root $1 $1$2 || {
 		/bin/umount -l $1 $1
@@ -473,7 +473,7 @@ build_springboard_rootfs() {
 	cp /lib/ld-uClibc-*.so lib
 
 	mkdir lib/upgrade
-	mkdir overlay
+	mkdir overlay lib/overlay.tmp
 	mkdir proc
 
 	mkdir sbin

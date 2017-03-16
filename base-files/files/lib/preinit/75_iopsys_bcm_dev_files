@@ -1,0 +1,26 @@
+#!/bin/ash
+
+# For kernel v4.1 some Broadcom device driver has changed
+# their character device major number. Try to fix it up
+# in runtime when booting while being backwards compatible.
+# Those drivers listed below can't autopopulate devtmpfs
+# due to only GPL kernel modules can use the required API.
+iopsys_bcm_dev_files() {
+	grep -E "^[[:space:][:digit:]]+" /proc/devices | \
+		while read -t 5 -s major name rest; do	
+			[ -z "$rest" ] || continue
+			[ $major -le 256 ] && continue
+
+			case "$name" in
+				pwrmngt|bcmfap|fcache|ingqos|bpm|bcmarl|chipinfo|tms|ext_bonding)
+					[ -c "/dev/$name" ] && rm -f "/dev/$name"
+					mknod -m 600 "/dev/$name" c $major 0
+					;;
+				*)
+					;;
+			esac
+		done
+}
+
+boot_hook_add preinit_mount_root iopsys_bcm_dev_files
+

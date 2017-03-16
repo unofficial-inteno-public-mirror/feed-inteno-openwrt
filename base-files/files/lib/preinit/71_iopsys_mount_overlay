@@ -8,7 +8,8 @@ iopsys_rootfs_pivot() {
 	echo "mounting and populating overlay"
 
 	# Are we using a kernel with integraded filesystem overlay
-	# support? Older versions used patches where arguments differed.
+	# support? Older versions used patches where arguments were
+	# different.
 	ovlayTmp=""
 	grep -qE "overlay$" /proc/filesystems && ovlayTmp="/lib/overlay.tmp"
 	fopivot /overlay "$ovlayTmp" /rom && pi_mount_skip_next=true

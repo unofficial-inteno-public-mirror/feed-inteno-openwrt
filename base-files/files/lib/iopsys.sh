@@ -74,24 +74,28 @@ copy_old_config() {
 		umount /mnt
 
 	elif [ "$iVersion" == "03 " ]; then
-
 		# jffs2 -> jffs2/ubifs upgrade
 		echo "Upgrading $new_fs_type from iVersion 3"
 
 		if [ "$new_fs_type" == "jffs2" ]; then
 			old_fs_mtd="mtd:rootfs_update"
-		else
+		elif brcm_fw_tool -i update /dev/mtd6 >/dev/null 2>&1; then
+			# was there a jffs2 partition?
 			old_fs_mtd="mtd:mtd_hi"
+		else
+			# No valid jffs2 partition, just empty flash
+			old_fs_mtd=""
 		fi
 
-		echo "Mount $old_fs_mtd on /mnt"
-		mount -t jffs2 -o ro $old_fs_mtd /mnt
-		copy_mounted_overlay
-		if [ -e /mnt/overlay/SAVE_CONFIG ]; then
-			copy_config_from /mnt/overlay
+		if [ -n "$old_fs_mtd" ]; then
+			echo "Mount $old_fs_mtd on /mnt"
+			mount -t jffs2 -o ro $old_fs_mtd /mnt
+			copy_mounted_overlay
+			if [ -e /mnt/overlay/SAVE_CONFIG ]; then
+				copy_config_from /mnt/overlay
+			fi
+			umount /mnt
 		fi
-		umount /mnt
-
 	else
 		if [ "$new_fs_type" == "jffs2" ]; then
 			# IOP2 jffs2 layout -> IOP3 jffs2 upgrade
@@ -225,6 +229,12 @@ iopsys_upgrade_handling() {
 
 	mount tmpfs /tmp -t tmpfs -o size=100M,mode=0755
 	build_minimal_rootfs /tmp
+
+	# move devtmpfs into pivot and if devtmpfs
+	# isn't used create an empty tmpfs.
+	grep -qE "[[:space:]]/dev[[:space:]]" /proc/mounts || \
+		mount -t tmpfs tmpfs /dev -o mode=0755,size=512K,nosuid,noatime
+	mount -o move /dev /tmp/dev
 
 	umount /sys
 	umount /proc

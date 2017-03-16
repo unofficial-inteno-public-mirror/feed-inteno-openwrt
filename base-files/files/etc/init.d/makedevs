@@ -3,6 +3,9 @@
 START=01
 
 start() {
+	# Copy files only if necessary. With devtmpfs it's not.
+	[ -c "/dev/bcm" ] && return 0
+
 	echo "Copying device files from /lib/dev to /dev ...again"
 	cp -a /lib/dev/* /dev
 }

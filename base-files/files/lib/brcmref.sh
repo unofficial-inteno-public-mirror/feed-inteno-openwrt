@@ -28,11 +28,24 @@ brcm_insmod() {
 }
 
 brcm_env() {
+	local fs rest
+
 	echo "Y" > /sys/module/printk/parameters/time
 	echo Setting up brcm environment
 	/bin/mount -a
+
+	# Check if we have a dynamic or static /dev.
+	# If devtmpfs isn't used we create an empty tmpfs
+	# as base for static nodes.
 	echo "Copying device files from /lib/dev to /dev"
-	cp -a /lib/dev/* /dev
+	fs=""
+	while read -t 5 -s fs rest; do
+		[ "$fs" = "devtmpfs" ] && break
+	done </proc/mounts
+	[ "$fs" = "devtmpfs" ] || \
+		mount -t tmpfs tmpfs /dev -o mode=0755,size=512K,nosuid,noatime
+	yes n | cp -ai /lib/dev/* /dev 2>/dev/null									# Don't overwrite dynamic files
+
 	mknod /var/fuse c 10 229
 	chmod a+rw /var/fuse
 	mkdir -p /var/log /var/run /var/state/dhcp /var/ppp /var/udhcpd /var/zebra /var/siproxd /var/cache /var/tmp /var/samba /var/samba/share /var/samba/homes /var/samba/private /var/samba/locks

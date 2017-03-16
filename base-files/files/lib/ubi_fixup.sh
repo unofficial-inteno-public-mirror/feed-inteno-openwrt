@@ -51,6 +51,8 @@ umount /sys
 mount -t ubifs -o rw,noatime ubi:rootfs_0 /old_root
 
 echo "====== Restart normal boot ======"
+# restore devtmpfs
+mount -o move /dev /old_root/dev
 cd /old_root
 pivot_root . /old_root/tmp
 exec env -i /usr/sbin/chroot . /etc/preinit noinitrd &> dev/kmsg

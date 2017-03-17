@@ -96,7 +96,7 @@ wpscbutton_action () {
 
 		echo "Starting WPS PBC client mode" > /dev/console
 		activate_wps_enrollee
-		ubus -t 30 listen wifi.wps | \
+		ubus -t 120 listen wifi.wps | \
 		while read event; do
 			json_load "$event"
 			json_select wifi.wps

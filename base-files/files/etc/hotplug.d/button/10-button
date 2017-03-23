@@ -73,7 +73,7 @@ wpscbutton_action () {
 		echo "Switching to 'repeater' mode" > /dev/console
 		mkdir -p /tmp/netmode_config_backup
 		cp -af /etc/config/* /tmp/netmode_config_backup/
-		uci set netmode.setup.curmode=repeater
+		uci set netmode.setup.curmode="repeater_brcm_2g_up_5g_down"
 		uci set netmode.repeater.reboot="0"
 		/etc/init.d/netmode reload
 		wps_client_get_credentials

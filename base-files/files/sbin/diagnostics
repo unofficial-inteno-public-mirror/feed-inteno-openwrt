@@ -110,11 +110,11 @@ tptest_run(){
 	fi
 
 	json_init
-	json_add_string status "$SUCCESS"
+	json_add_int status "$SUCCESS"
 	json_add_string upstream "$sent"
 	json_add_string downstream "$received"
 	json_add_string label "$label"
-	json_add_string sequence_number "$seq"
+	json_add_int sequence_number "$seq"
 
 	if [ $ubus -eq 1 ]; then
 		ubus send diagnostics.speedtest "`json_dump`"

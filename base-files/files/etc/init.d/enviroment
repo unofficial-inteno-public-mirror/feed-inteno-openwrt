@@ -1,0 +1,235 @@
+#!/bin/sh /etc/rc.common
+
+START=10
+USE_PROCD=1
+EXTRA_COMMANDS="macro"
+EXTRA_HELP="        macro   convert options to macro"
+
+handle_threads()
+{
+	# initialize kernel schedule priorities
+	smd -s
+}
+
+handle_passwords()
+{
+	local users="admin support user"
+	local user ppwd spwd
+
+	for user in $users; do
+		ppwd=$(sed -ne "/^$user:/s/^$user:\([^:]*\):.*$/\1/p" /etc/passwd)
+		spwd=$(sed -ne "/^$user:/s/^$user:\([^:]*\):.*$/\1/p" /etc/shadow)
+
+		if [ -n "${ppwd#[\!x]}" ] && [ -z "${spwd#[\!x]}" ]; then
+			logger -t migrate-shadow "Moving $user password hash into shadow database"
+			grep -wq $user /etc/shadow || echo "$user:*:0:0:99999:7:::" >>/etc/shadow
+			sed -i -e "s:^$user\:[^\:]*\::$user\:x\::"     /etc/passwd
+			sed -i -e "s:^$user\:[^\:]*\::$user\:$ppwd\::" /etc/shadow
+		fi
+	done
+}
+
+local configs_to_macro="passwords network wireless system cwmp provisioning"
+
+convert_from_macro()
+{
+	local BMAC=$(db -q get hw.board.BaseMacAddr | tr -d ':')
+	BMAC=${BMAC// /}
+	local MAC=$(printf "%X\n" $((0x$BMAC)))
+	local BSSID=$(printf "%X\n" $((0x$BMAC + 2)))
+	local WPAKEY=$(db get hw.board.wpaKey)
+	local SERIALNR=$(db get hw.board.serialNumber)
+	local HWVER=$(db get hw.board.hardwareVersion)
+	local RMODEL=$(db get hw.board.routerModel)
+	local DESKEY=$(db get hw.board.desKey)
+	local IOPVER=$(db get hw.board.iopVersion)
+	local IOPHOSTNAME=${IOPVER//[!a-zA-Z0-9-]/-} # hostname as in RFC 1035
+
+	local oid=${BMAC:0:6}
+	local mac=$BMAC
+	local mac2=$(echo -n $MAC | tail -c 2)
+	local mac4=$(echo -n $MAC | tail -c 4)
+	local mac6=$(echo -n $MAC | tail -c 6)
+	local bssid=$BSSID
+	local bssid2=$(echo -n $BSSID | tail -c 2)
+	local bssid4=$(echo -n $BSSID | tail -c 4)
+	local bssid6=$(echo -n $BSSID | tail -c 6)
+	local wpakey="${WPAKEY:-1234567890}"
+	local hardwareid=$HWVER-$(echo $RMODEL | sed -r 's;.+-(.+);\1;')
+
+	for config in $configs_to_macro; do
+		if [ -f /etc/config/$config ]; then
+			grep -q "\$MAC6" /etc/config/$config && sed -i "s/\$MAC6/$mac6/g" /etc/config/$config
+			grep -q "\$MAC4" /etc/config/$config && sed -i "s/\$MAC4/$mac4/g" /etc/config/$config
+			grep -q "\$MAC2" /etc/config/$config && sed -i "s/\$MAC2/$mac2/g" /etc/config/$config
+			grep -q "\$MAC" /etc/config/$config && sed -i "s/\$MAC/$mac/g" /etc/config/$config
+			grep -q "\$BSSID6" /etc/config/$config && sed -i "s/\$BSSID6/$bssid6/g" /etc/config/$config
+			grep -q "\$BSSID4" /etc/config/$config && sed -i "s/\$BSSID4/$bssid4/g" /etc/config/$config
+			grep -q "\$BSSID2" /etc/config/$config && sed -i "s/\$BSSID2/$bssid2/g" /etc/config/$config
+			grep -q "\$BSSID" /etc/config/$config && sed -i "s/\$BSSID/$bssid/g" /etc/config/$config
+			grep -q "\$WPAKEY" /etc/config/$config && sed -i "s/\$WPAKEY/$wpakey/g" /etc/config/$config
+			grep -q "\$DESKEY" /etc/config/$config && sed -i "s/\$DESKEY/$DESKEY/g" /etc/config/$config
+			grep -q "\$SER" /etc/config/$config && sed -i "s/\$SER/$SERIALNR/g" /etc/config/$config
+			grep -q "\$OUI" /etc/config/$config && sed -i "s/\$OUI/$oid/g" /etc/config/$config
+			grep -q "\$HARDWAREID" /etc/config/$config && sed -i "s/\$HARDWAREID/$hardwareid/g" /etc/config/$config
+			grep -q "\$IOPVER" /etc/config/$config && sed -i "s/\$IOPVER/$IOPVER/g" /etc/config/$config
+			grep -q "\$IOPHOSTNAME" /etc/config/$config && sed -i "s/\$IOPHOSTNAME/$IOPHOSTNAME/g" /etc/config/$config
+			[ "$config" == "wireless" ] && grep -q "pskmixedpsk2" /etc/config/$config && sed -i "s/pskmixedpsk2/mixed-psk/g" /etc/config/$config
+		fi
+	done
+}
+
+convert_to_macro()
+{
+	local BMAC=$(db -q get hw.board.BaseMacAddr | tr -d ':')
+	BMAC=${BMAC// /}
+	local MAC=$(printf "%X\n" $((0x$BMAC)))
+	local BSSID=$(printf "%X\n" $((0x$BMAC + 2)))
+	local WPAKEY=$(db get hw.board.wpaKey)
+	local SERIALNR=$(db get hw.board.serialNumber)
+	local HWVER=$(db get hw.board.hardwareVersion)
+	local RMODEL=$(db get hw.board.routerModel)
+	local DESKEY=$(db get hw.board.desKey)
+	local IOPVER=$(db get hw.board.iopVersion)
+	local IOPHOSTNAME=${IOPVER//[!a-zA-Z0-9-]/-} # hostname as in RFC 1035
+
+	local oid=${BMAC:0:6}
+	local mac=$BMAC
+	local mac2=$(echo -n $MAC | tail -c 2)
+	local mac4=$(echo -n $MAC | tail -c 4)
+	local mac6=$(echo -n $MAC | tail -c 6)
+	local bssid=$BSSID
+	local bssid2=$(echo -n $BSSID | tail -c 2)
+	local bssid4=$(echo -n $BSSID | tail -c 4)
+	local bssid6=$(echo -n $BSSID | tail -c 6)
+	local wpakey="${WPAKEY:-1234567890}"
+	local hardwareid=$HWVER-$(echo $RMODEL | sed -r 's;.+-(.+);\1;')
+
+	for config in $configs_to_macro; do
+		if [ -f /etc/config/$config ]; then
+			grep -q "$mac6" /etc/config/$config && sed -i "s/$mac6/\$MAC6/g" /etc/config/$config
+			grep -q "$mac4" /etc/config/$config && sed -i "s/$mac4/\$MAC4/g" /etc/config/$config
+			grep -q "$mac2" /etc/config/$config && sed -i "s/$mac2/\$MAC2/g" /etc/config/$config
+			grep -q "$mac" /etc/config/$config && sed -i "s/$mac/\$MAC/g" /etc/config/$config
+			grep -q "$bssid6" /etc/config/$config && sed -i "s/$bssid6/\$BSSID6/g" /etc/config/$config
+			grep -q "$bssid4" /etc/config/$config && sed -i "s/$bssid4/\$BSSID4/g" /etc/config/$config
+			grep -q "$bssid2" /etc/config/$config && sed -i "s/$bssid2/\$BSSID2/g" /etc/config/$config
+			grep -q "$bssid" /etc/config/$config && sed -i "s/$bssid/\$BSSID/g" /etc/config/$config
+			grep -q "$wpakey" /etc/config/$config && sed -i "s/$wpakey/\$WPAKEY/g" /etc/config/$config
+			grep -q "$DESKEY" /etc/config/$config && sed -i "s/$DESKEY/\$DESKEY/g" /etc/config/$config
+			grep -q "$SERIALNR" /etc/config/$config && sed -i "s/$SERIALNR/\$SER/g" /etc/config/$config
+			grep -q "$oid" /etc/config/$config && sed -i "s/$oid/\$OUI/g" /etc/config/$config
+			grep -q "$hardwareid" /etc/config/$config && sed -i "s/$hardwareid/\$HARDWAREID/g" /etc/config/$config
+			grep -q "$IOPVER" /etc/config/$config && sed -i "s/$IOPVER/\$IOPVER/g" /etc/config/$config
+			grep -q "$IOPHOSTNAME" /etc/config/$config && sed -i "s/$IOPHOSTNAME/\$IOPHOSTNAME/g" /etc/config/$config
+		fi
+	done
+}
+
+macro()
+{
+	convert_to_macro
+}
+
+handle_upgrade_count() {
+	if cat /proc/cmdline |grep -q "ubi:rootfs_0"; then
+		brcm_fw_tool -s -1 update /dev/mtd0
+	elif cat /proc/cmdline |grep -q "ubi:rootfs_1"; then
+		brcm_fw_tool -s -1 update /dev/mtd1
+	else
+		ls /cferam* | awk -F'.' '{print$NF}'
+	fi
+}
+
+handle_openwrtversion() {
+	## THIS WILL NEED TO BE MOVED TO THE RIGHT PLACE
+	# even though this runs repeatedly, it does not matter 
+
+	# write iop version data to /etc/openwrt_version from where procd 
+	# will read it and display it using system info ubus call
+	IOP_VERSION="$(db get hw.board.iopVersion)"
+	RELEASE=${IOP_VERSION%-*}; RELEASE=${RELEASE##*_}
+	REVISION=${IOP_VERSION##*-}
+	MODEL=$(db get hw.board.routerModel)
+	HARDWARE=$(db get hw.board.hardware)
+
+	sed -i "s/.*DISTRIB_ID.*/DISTRIB_ID='IOPSYS'/g" /etc/openwrt_release
+	sed -i "s/.*DISTRIB_RELEASE.*/DISTRIB_RELEASE='$RELEASE'/g" /etc/openwrt_release
+	sed -i "s/.*DISTRIB_REVISION.*/DISTRIB_REVISION='$REVISION'/g" /etc/openwrt_release
+	sed -i "s/.*DISTRIB_DESCRIPTION.*/DISTRIB_DESCRIPTION='IOPSYS $REVISION $RELEASE'/g" /etc/openwrt_release
+	sed -i "s/.*DISTRIB_TARGET.*/DISTRIB_TARGET='$MODEL'/g" /etc/openwrt_release
+
+	sed -i "s/.*DEVICE_MANUFACTURER.*/DEVICE_MANUFACTURER='INTENO'/g" /etc/device_info
+	sed -i "s/.*DEVICE_PRODUCT.*/DEVICE_PRODUCT='$HARDWARE'/g" /etc/device_info
+	sed -i "s/.*DEVICE_REVISION.*/DEVICE_REVISION='$MODEL'/g" /etc/device_info
+
+	# openwrt defaults are set like this
+	# DISTRIB_ID='OpenWrt'
+	# DISTRIB_RELEASE='15.05'
+	# DISTRIB_REVISION='r47165'
+	# DISTRIB_CODENAME='chaos_calmer'
+	# DISTRIB_TARGET='bcm53xx/generic'
+	# DISTRIB_DESCRIPTION='OpenWrt Chaos Calmer 15.05'
+	# DISTRIB_TAINTS='no-all busybox'
+
+	# the template looks like this
+	# DISTRIB_ID="%D"
+	# DISTRIB_RELEASE="%C"
+	# DISTRIB_REVISION="%R"
+	# DISTRIB_CODENAME="%n"
+	# DISTRIB_TARGET="%S"
+	# DISTRIB_DESCRIPTION="%D %N %V"
+	# DISTRIB_TAINTS="%t"
+}
+
+handle_backup() {
+	local ISTHERE=0
+
+	compare_with() {
+		local confile="$2"
+		config_get files "$1" file
+		for f in $files; do
+			if [ "$f" == "$confile" ]; then
+				ISTHERE=1
+				return 0
+			fi
+		done
+	}
+
+	config_load backup
+
+	for conf in $(ls /etc/config); do
+		case $conf in
+			backup|boardpanel|dmmap|fstab|hosts|luci|rpcd|speedtest|voice_codecs) continue;
+		esac
+		config_foreach compare_with service "/etc/config/$conf"
+		if [ $ISTHERE -eq 0 ]; then
+			uci set backup.$conf=service
+			uci set backup.$conf.desc=$conf
+			uci set backup.$conf.file="/etc/config/$conf"
+		fi
+		ISTHERE=0
+	done
+
+	uci commit backup
+
+}
+
+print_out_sw_ver() {
+	echo Software Version: $(grep "IOP Version" /etc/banner | awk '{print$3}') >/dev/kmsg
+}
+
+boot() {
+	print_out_sw_ver
+	handle_upgrade_count
+	handle_threads
+	handle_openwrtversion
+	handle_passwords
+	handle_backup
+	convert_from_macro
+}
+
+start_service() {
+        convert_from_macro
+}
+

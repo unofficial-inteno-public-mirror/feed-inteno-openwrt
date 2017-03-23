@@ -81,7 +81,7 @@ wpscbutton_action () {
 		mkdir -p /tmp/netmode_config_backup
 		cp -af /etc/config/* /tmp/netmode_config_backup/
 
-		uci set netmode.setup.curmode=repeater
+		uci set netmode.setup.curmode="repeater_mtk_5g_up_dual_down"
 		uci set netmode.repeater.reboot="0"
 		uci commit netmode
 		/etc/init.d/netmode reload

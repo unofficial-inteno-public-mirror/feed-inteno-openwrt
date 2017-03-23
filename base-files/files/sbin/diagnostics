@@ -251,7 +251,6 @@ while getopts "ac:C:d:h:ip:q:s:t:u:Uw:W:" opt; do
 	esac
 done
 
-echo "$# $OPTIND"
 [ $# -lt $OPTIND ] || {
 	usage
 	exit 3

@@ -180,7 +180,7 @@ run_trace() {
 	is_num "$count" || return 1
 	is_num "$timeout" || return 1
 	[ "$address" == "" ] && return 1
-	run_cmd "$cmd -c $count -W $timeout" "$address"
+	run_cmd "$cmd -q $count -w $timeout" "$address"
 }
 
 usage(){

@@ -71,9 +71,11 @@ wpscbutton_action () {
 		return
 	fi
 
-	if [ "$cur_mode" == "repeater" ] ; then
+	case "$cur_mode" in
+	repeater*)
 		activate_wps_enrollee
-	else
+	;;
+	*)
 		ubus call leds set  '{"state" : "allflash"}'
 
 		echo "Switching to 'repeater' mode" > /dev/console
@@ -124,7 +126,8 @@ wpscbutton_action () {
 		wifi reload
 		ubus call router.network reload
 		ubus call leds set  '{"state" : "normal"}'
-	fi
+	;;
+	esac
 }
 
 case "$ACTION" in

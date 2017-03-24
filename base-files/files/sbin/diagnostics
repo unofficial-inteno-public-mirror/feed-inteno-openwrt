@@ -129,7 +129,13 @@ run_cmd() {
 	host=$2
 	
 	json_init
-	json_add_string stdout "$($CMND $host)"
+	local res
+	if res="`$CMND $host 2>&1`"; then
+		json_add_string stdout "$res"
+	else
+		res=${res#*line 1: }
+		json_add_string stderr "$res"
+	fi
 	json_add_int sequence_number "$seq"
 	if [ $ubus -eq 1 ]; then
 		ubus send diagnostics.${CMND%% *} "`json_dump`"

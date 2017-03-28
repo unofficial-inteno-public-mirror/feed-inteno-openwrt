@@ -180,7 +180,7 @@ config led_map led_lan
 config led_map led_status
 	list led_action_ok     'Status_red = OFF'
 	list led_action_off    'Status_red = OFF'
-	list led_action_notice 'Status_red = OFF'
+	list led_action_notice 'Status_red = ON'
 	list led_action_alert  'Status_red = FLASH_SLOW'
 	list led_action_error  'Status_red = FLASH_FAST'
 

@@ -1,0 +1,293 @@
+#!/bin/sh
+
+. /usr/share/libubox/jshn.sh
+
+local ubus=0
+local seq=0
+local auto=0
+local testmode="up_down"
+local up_p=""
+local down_p=""
+local address=""
+local port=""
+local count=1
+local timeout=1
+local cmd=""
+local interactive=0
+
+is_num() {
+	[ "$1" == "" ] && return 1
+	[ "$(echo $1 | sed 's/[0-9]//g')" == "" ] && return 0 || return 1
+}
+
+tptest_run(){
+
+	local SUCCESS=0
+
+	local sent="none"
+	local received="none"
+	local label="success"
+	local answer
+	
+	if [ $interactive == 1 ]; then
+		echo -n "do you want to run in auto mode? [Y/n]: "
+		read answer
+		case $answer in
+			*n*)
+				auto=0
+				;;
+			*)
+				auto=1
+				;;
+		esac
+		echo -n "what mode do want to run in? [up|down|up_down]: "
+		read testmode
+		case $testmode in
+			*up*)
+				if [ $auto -eq 0 ]; then
+					echo -n "what package-size for tcp-send do you want?: "
+					read up_p
+				fi
+		esac
+		case $testmode in
+			*down*)
+				if [ $auto -eq 0 ]; then
+					echo -n "what package-size for tcp-receive do you want?: "
+					read down_p
+				fi
+		esac
+		echo -n "What host do you want to use?: "
+		read address
+		echo -n "What port do you want to use?: "
+		read port
+	fi
+
+	case "$testmode" in
+		up|down|up_down);;
+		*)return 1;;
+	esac
+
+	[ "$address" == "" ] && return 1
+
+	is_num "$port" || return 1
+	[ $port -gt 65535 -o $port -lt 0 ] && return
+
+	if [ $auto -eq 0 ]; then
+		case $testmode in
+			up|up_down)
+				is_num "$up_p" || return 1
+				;;
+			down|up_down)
+				is_num "$down_p" || return 1
+				;;
+			*)
+				return 1
+				;;
+		esac
+	fi
+
+	case "$testmode" in
+		*up*)
+			if [ $auto -eq 1 ]; then
+				sent=$(tptest -v 1 -n 1 -m tcp-send-auto $address $port | awk '/TCP Send/{print($3)}')
+			else
+				sent=$(tptest -v 2 -n 1 -m tcp-send 60 $up_p $address $port | awk '/Throughput/{print($2)}')
+			fi
+	esac
+
+	case "$testmode" in
+		*down*)
+			if [ $auto -eq 1 ]; then
+				received=$(tptest -v 1 -n 1 -m tcp-receive-auto $address $port | awk '/TCP Recv/{print($3)}')
+			else
+				received=$(tptest -v 2 -n 1 -m tcp-receive 60 $down_p $address $port | awk '/Throughput/{print($2)}')
+			fi
+	esac
+
+	if [ -z "$received" -o -z "$sent" ]; then
+		SUCCESS=-1;
+		label="wrong address:port combination";
+	fi
+
+	json_init
+	json_add_int status "$SUCCESS"
+	json_add_string upstream "$sent"
+	json_add_string downstream "$received"
+	json_add_string label "$label"
+	json_add_int sequence_number "$seq"
+
+	if [ $ubus -eq 1 ]; then
+		ubus send diagnostics.speedtest "`json_dump`"
+	else
+		json_dump -i
+	fi
+		
+}
+
+run_cmd() {
+	CMND=$1
+	host=$2
+	
+	json_init
+	local res
+	if res="`$CMND $host 2>&1`"; then
+		json_add_string stdout "$res"
+	else
+		res=${res#*line 1: }
+		json_add_string stderr "$res"
+	fi
+	json_add_int sequence_number "$seq"
+	if [ $ubus -eq 1 ]; then
+		ubus send diagnostics.${CMND%% *} "`json_dump`"
+	else
+		json_dump -i
+	fi
+}
+
+run_ping() {
+	if [ $interactive -eq 1 ]; then
+		echo -n "please enter number of pings: "
+		read count
+		echo -n "please enter timeout (s): "
+		read timeout
+		echo -n "please enter host to ping: "
+		read address
+	fi
+	is_num "$count" || {
+		echo "count not number"
+		return 1
+	}
+	is_num "$timeout" || {
+		echo "timeout not number"
+		return 1
+	}
+	[ "$address" == "" ] && {
+		echo "host is empty"
+		return 1
+	}
+	run_cmd "$cmd -c $count -W $timeout" "$address"
+}
+
+run_trace() {
+	if [ $interactive -eq 1 ]; then
+		echo -n "please enter number of queries: "
+		read count
+		echo -n "please enter wait time (s): "
+		read timeout
+		echo -n "please enter host to trace: "
+		read address
+	fi
+	is_num "$count" || return 1
+	is_num "$timeout" || return 1
+	[ "$address" == "" ] && return 1
+	run_cmd "$cmd -q $count -w $timeout" "$address"
+}
+
+usage(){
+	echo -e "\nusage: $0 [Options] [arguments]"
+	echo -e "Options:"
+	echo -e "\t-s <num>	Add custom sequence number. Will be added to the result"
+	echo -e "\t-U		Use ubus send to display the results"
+	echo -e "\t-i		Interactive mode (no command-arguments needed)"
+	echo -e "\t-C		The command to run"
+	echo -e "Commands:"
+	echo -e "\ttptest\t\t\truns tptest with the arguments following arguments:\n"
+	echo -e "\t\t-a\t\tRun with tptest auto package size"
+	echo -e "\t\t-t\t\tTestmode: up | down | up_down determines what test to run tcp-send/receive"
+	echo -e "\t\t-u\t\t[required if not auto and up or up_down] Packet size to use in the tcp-send test"
+	echo -e "\t\t-d\t\t[required if not auto and down or up_down] Packet size to use in the tcp-receive test"
+	echo -e "\t\t-h\t\t[required] Address to do the test against"
+	echo -e "\t\t-p\t\t[required] Port to run the test on"
+	echo ""
+	echo -e "\tping|ping6\t\tPing host"
+	echo -e "\t\t-h\t\t[required] Host to ping"
+	echo -e "\t\t-c\t\tNumber of pings (default 1)"
+	echo -e "\t\t-W\t\tTimeout (default 1)"
+	echo ""
+	echo -e "\ttraceroute[6]\t\tTraceroute host"
+	echo -e "\t\t-h\t\t[required] Host to trace"
+	echo -e "\t\t-q\t\tNumber of queries (default 1)"
+	echo -e "\t\t-w\t\tWait time (default 1)"
+	echo ""
+}
+
+while getopts "ac:C:d:h:ip:q:s:t:u:Uw:W:" opt; do
+
+	case $opt in
+		a)
+			auto=1
+			;;
+		c|q)
+			count=$OPTARG
+			;;
+		C)
+			cmd=$OPTARG
+			;;
+		d)
+			down_p=$OPTARG
+			;;
+		h)
+			address=$OPTARG
+			;;
+		i)
+			interactive=1
+			;;
+		p)
+			port=$OPTARG
+			;;
+		s)
+			seq=$OPTARG
+			;;
+		t)
+			testmode=$OPTARG
+			;;
+		u)
+			up_p=$OPTARG
+			;;
+		U)
+			ubus=1
+			;;
+		w|W)
+			timeout=$OPTARG
+			;;
+		*)
+			usage
+			exit 1
+			;;
+	esac
+done
+
+[ $# -lt $OPTIND ] || {
+	usage
+	exit 3
+}
+
+is_num $seq || {
+	usage
+	exit 5
+}
+
+case $cmd in
+	tptest)
+		tptest_run || {
+			usage
+			exit 97
+		}
+		;;
+	ping|ping6)
+		run_ping || {
+			usage
+			exit 98
+		}
+		;;
+	traceroute|traceroute6)
+		run_trace || {
+			usage
+			exit 99
+		}
+		;;
+	*)
+		usage
+		exit 2
+	;;
+esac

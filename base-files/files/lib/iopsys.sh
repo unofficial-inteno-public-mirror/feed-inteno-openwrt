@@ -26,7 +26,6 @@ copy_config_from() {
 
 	if [ -e $1/sysupgrade.tgz ]; then
 	    echo "Unpacking old config..."
-		mount -o remount,rw /
 		tar xvzf $1/sysupgrade.tgz -C /overlay/
 		# we don't want to keep backup file
 		[ -f /overlay/etc/config/backup ] && cp /rom/etc/config/backup /overlay/etc/config/backup
@@ -60,7 +59,7 @@ copy_old_config() {
 		# ubifs -> ubifs upgrade
 		echo "Upgrading $new_fs_type from iVersion 4"
 
-		if cat /proc/cmdline |grep -q "ubi:rootfs_0"; then
+		if cat /proc/cmdline |grep -q "ubi.*:rootfs_0"; then
 			old_vol="ubi:rootfs_1"
 		else
 			old_vol="ubi:rootfs_0"
@@ -197,6 +196,8 @@ iopsys_upgrade_handling() {
 	export FIRST_BOOT="yes"
 
 	mount proc /proc -t proc
+	# need to have a writable root for the rest of the script to work
+	mount -o remount,rw /
 
 	if cat /proc/mounts | grep -q '/tmp tmpfs'; then
 		# preinit restart after upgrade jffs2 -> ubifs

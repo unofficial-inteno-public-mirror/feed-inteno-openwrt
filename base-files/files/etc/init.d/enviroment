@@ -45,6 +45,13 @@ convert_from_macro()
 	local IOPVER=$(db get hw.board.iopVersion)
 	local IOPHOSTNAME=${IOPVER//[!a-zA-Z0-9-]/-} # hostname as in RFC 1035
 
+	local MACLAN=$(printf "%0.12x\n" $((0x$BMAC)))
+	local MACWAN=$(printf "%0.12x\n" $((0x$BMAC + 1)))
+	MACLAN=$(echo $MACLAN | sed -e "s/.\{2\}/&:/g")
+	MACWAN=$(echo $MACWAN | sed -e "s/.\{2\}/&:/g")
+	MACLAN=${MACLAN:0:17}
+	MACWAN=${MACWAN:0:17}
+
 	local oid=${BMAC:0:6}
 	local mac=$BMAC
 	local mac2=$(echo -n $MAC | tail -c 2)
@@ -59,6 +66,8 @@ convert_from_macro()
 
 	for config in $configs_to_macro; do
 		if [ -f /etc/config/$config ]; then
+			grep -q "\$MACLAN" /etc/config/$config && sed -i "s/\$MACLAN/$MACLAN/g" /etc/config/$config
+			grep -q "\$MACWAN" /etc/config/$config && sed -i "s/\$MACWAN/$MACWAN/g" /etc/config/$config
 			grep -q "\$MAC6" /etc/config/$config && sed -i "s/\$MAC6/$mac6/g" /etc/config/$config
 			grep -q "\$MAC4" /etc/config/$config && sed -i "s/\$MAC4/$mac4/g" /etc/config/$config
 			grep -q "\$MAC2" /etc/config/$config && sed -i "s/\$MAC2/$mac2/g" /etc/config/$config
@@ -93,6 +102,13 @@ convert_to_macro()
 	local IOPVER=$(db get hw.board.iopVersion)
 	local IOPHOSTNAME=${IOPVER//[!a-zA-Z0-9-]/-} # hostname as in RFC 1035
 
+	local MACLAN=$(printf "%0.12x\n" $((0x$BMAC)))
+	local MACWAN=$(printf "%0.12x\n" $((0x$BMAC + 1)))
+	MACLAN=$(echo $MACLAN | sed -e "s/.\{2\}/&:/g")
+	MACWAN=$(echo $MACWAN | sed -e "s/.\{2\}/&:/g")
+	MACLAN=${MACLAN:0:17}
+	MACWAN=${MACWAN:0:17}
+
 	local oid=${BMAC:0:6}
 	local mac=$BMAC
 	local mac2=$(echo -n $MAC | tail -c 2)
@@ -107,6 +123,8 @@ convert_to_macro()
 
 	for config in $configs_to_macro; do
 		if [ -f /etc/config/$config ]; then
+			grep -q "$MACLAN" /etc/config/$config && sed -i "s/$MACLAN/\$MACLAN/g" /etc/config/$config
+			grep -q "$MACWAN" /etc/config/$config && sed -i "s/$MACWAN/\$MACWAN/g" /etc/config/$config
 			grep -q "$mac6" /etc/config/$config && sed -i "s/$mac6/\$MAC6/g" /etc/config/$config
 			grep -q "$mac4" /etc/config/$config && sed -i "s/$mac4/\$MAC4/g" /etc/config/$config
 			grep -q "$mac2" /etc/config/$config && sed -i "s/$mac2/\$MAC2/g" /etc/config/$config

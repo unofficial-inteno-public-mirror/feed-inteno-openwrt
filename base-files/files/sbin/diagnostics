@@ -110,11 +110,11 @@ tptest_run(){
 	fi
 
 	json_init
-	json_add_string status "$SUCCESS"
+	json_add_int status "$SUCCESS"
 	json_add_string upstream "$sent"
 	json_add_string downstream "$received"
 	json_add_string label "$label"
-	json_add_string sequence_number "$seq"
+	json_add_int sequence_number "$seq"
 
 	if [ $ubus -eq 1 ]; then
 		ubus send diagnostics.speedtest "`json_dump`"
@@ -129,7 +129,13 @@ run_cmd() {
 	host=$2
 	
 	json_init
-	json_add_string stdout "$($CMND $host)"
+	local res
+	if res="`$CMND $host 2>&1`"; then
+		json_add_string stdout "$res"
+	else
+		res=${res#*line 1: }
+		json_add_string stderr "$res"
+	fi
 	json_add_int sequence_number "$seq"
 	if [ $ubus -eq 1 ]; then
 		ubus send diagnostics.${CMND%% *} "`json_dump`"
@@ -174,7 +180,7 @@ run_trace() {
 	is_num "$count" || return 1
 	is_num "$timeout" || return 1
 	[ "$address" == "" ] && return 1
-	run_cmd "$cmd -c $count -W $timeout" "$address"
+	run_cmd "$cmd -q $count -w $timeout" "$address"
 }
 
 usage(){

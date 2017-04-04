@@ -65,10 +65,12 @@ wpscbutton_action () {
 	json_get_var carrier carrier
 	[ "$carrier" == "1" ] && return
 
-	if [ "$cur_mode" == "repeater" ] ; then
+	case "$cur_mode" in
+	repeater*)
 		wps_client_get_credentials
 		[ $wps_paired -eq 0 ] && wifi reload
-	else
+	;;
+	*)
 		ubus call leds set  '{"state" : "test"}'
 		echo "Switching to 'repeater' mode" > /dev/console
 		mkdir -p /tmp/netmode_config_backup
@@ -103,7 +105,8 @@ wpscbutton_action () {
 		rm -rf /tmp/netmode_config_backup
 		wifi reload
 		ubus call router.network reload
-	fi
+	;;
+	esac
 }
 
 infobutton_action() {

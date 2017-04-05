@@ -2,7 +2,7 @@
 . /lib/functions.sh
 . /lib/functions/system.sh
 
-./lib/functions/iop_macro.sh
+./lib/functions/iop_config.sh
 
 # initialize defaults
 RAMFS_COPY_BIN=""	# extra programs for temporary ramfs root

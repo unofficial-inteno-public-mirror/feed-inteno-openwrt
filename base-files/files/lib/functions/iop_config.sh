@@ -2,6 +2,7 @@
 #
 # IOPSYS related helper functions.
 #
+# Config file related functions.
 #
 
 

@@ -499,7 +499,7 @@ band_steering() {
 	local enabled policy
 	local rssi_threshold bw_util
 
-	iwpriv ra0 set BndStrgEnable=0
+	iwpriv ra0 set BndStrgEnable=0 2>/dev/null
 	iwpriv rai0 set BndStrgEnable=0
 
 	enabled="$(uci -q get wireless.bandsteering.enabled)"
@@ -644,7 +644,7 @@ setup_client_mode() {
 	iwpriv $ifname set ApCliEncrypType="$encrtype"
 	iwpriv $ifname set ApCliWPAPSK="$wpapsk"
 	iwpriv $ifname set ApCliEnable=1
-	iwpriv $ifname set ApCliAutoConnect=1
+	iwpriv $ifname set ApCliAutoConnect=1 2>/dev/null
 }
 
 config_load wireless

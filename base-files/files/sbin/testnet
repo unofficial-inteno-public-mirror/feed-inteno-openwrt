@@ -109,7 +109,7 @@ netmode_check() {
 ubus call led.internet  set '{"enable" : 1}'
 
 while true; do
-	if [ -z "$(netmode_check)" ]; then
+	if ! pidof wificontrol >/dev/null; then
 		internet_test
 
 		if [ $netcon -eq 1 ]; then
@@ -117,12 +117,6 @@ while true; do
 		else
 			ubus send internet '{"status" : "offline"}'
 		fi
-	else
-		[ $(pidof wificontrol | wc -w) -eq 1 ] || {
-			killall -15 wificontrol >/dev/null 2>&1
-			sleep 1
-			wificontrol -s &
-		}
 	fi
 
 	sleep 5

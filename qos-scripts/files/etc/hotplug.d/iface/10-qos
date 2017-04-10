@@ -1,2 +1,2 @@
 #!/bin/sh
-[ "$ACTION" = ifup ] && /etc/init.d/qos enabled && /usr/lib/qos/generate.sh interface "$INTERFACE" | sh
+[ "$ACTION" = ifup -a "$(uci -q get qos.${INTERFACE})" == "interface" ] && /etc/init.d/qos enabled && /usr/lib/qos/generate.sh interface "$INTERFACE" | sh

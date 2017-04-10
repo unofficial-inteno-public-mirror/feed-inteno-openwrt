@@ -118,20 +118,23 @@ parse_matching_rule() {
 				append "$var" "-m comment --comment '$value'"
 			;;
 			*:tos)
-                                add_insmod xt_dscp
-                                case "$value" in
-                                        !*) append "$var" "-m tos ! --tos $value";;
-                                        *) append "$var" "-m tos --tos $value"
-                                esac
+				for vl in $value; do
+		                        case "$vl" in
+		                                !*) append "$var" "-m tos ! --tos $vl";;
+		                                *) append "$var" "-m tos --tos $vl";;
+		                        esac
+				done
                         ;;
 			*:dscp)
                                 add_insmod xt_dscp
 				dscp_option="--dscp"
-                                [ -z "${value%%[EBCA]*}" ] && dscp_option="--dscp-class"
-				case "$value" in
-                                       	!*) append "$var" "-m dscp ! $dscp_option $value";;
-                                       	*) append "$var" "-m dscp $dscp_option $value"
-                                esac
+				for vl in $value; do
+		                        [ -z "${vl%%[EBCA]*}" ] && dscp_option="--dscp-class"
+					case "$vl" in
+						!*) append "$var" "-m dscp ! $dscp_option $vl";;
+						*) append "$var" "-m dscp $dscp_option $vl";;
+		                        esac
+				done
                         ;;
 			*:direction)
 				value="$(echo "$value" | sed -e 's,-,:,g')"
@@ -160,7 +163,8 @@ parse_matching_rule() {
 				esac
 			;;
 			1:mark)
-				config_get class "${value##!}" classnr
+				#config_get class "${value##!}" classnr
+				class="${value##!}"
 				[ -z "$class" ] && continue;
 				case "$value" in
 					!*) append "$var" "-m mark ! --mark $class/0x0f";;
@@ -195,8 +199,23 @@ config_cb() {
 	# Section start
 	case "$1" in
 		interface)
+			# use xDSL rates if no specific download/upload limit is given
+			# if connection type is not DSL use 1Gbit/1Gbit
+			local maxdownload="1000000"
+			local maxupload="1000000"
+
+			device="$(find_ifname ${2})"
+
+			case $device in
+				atm*|ptm*)
+					maxdownload=$(xdslctl info --stats 2>/dev/null | grep Bearer | grep rate | awk '{print$11}')
+					maxupload=$(xdslctl info --stats 2>/dev/null | grep Bearer | grep rate | awk '{print$6}')
+				;;
+			esac
+
 			config_set "$2" "classgroup" "Default"
-			config_set "$2" "upload" "128"
+			config_set "$2" "upload" "$maxupload"
+			config_set "$2" "download" "$maxdownload"
 		;;
 		classify|default|reclassify)
 			option_cb() {
@@ -209,7 +228,7 @@ config_cb() {
 	config_get TYPE "$CONFIG_SECTION" TYPE
 	case "$TYPE" in
 		interface)
-			config_get_bool enabled "$CONFIG_SECTION" enabled 1
+			config_get_bool enabled "$CONFIG_SECTION" enabled 0
 			[ 1 -eq "$enabled" ] || return 0
 			config_get classgroup "$CONFIG_SECTION" classgroup
 			config_set "$CONFIG_SECTION" ifbdev "$C"
@@ -219,7 +238,7 @@ config_cb() {
 			config_get device "$CONFIG_SECTION" device
 			[ -z "$device" ] && {
 				device="$(find_ifname ${CONFIG_SECTION})"
-				config_set "$CONFIG_SECTION" device "$device"
+				config_set "$CONFIG_SECTION" device "${device:-eth0}"
 			}
 		;;
 		classgroup) append CG "$CONFIG_SECTION";;
@@ -283,6 +302,10 @@ start_interface() {
 	[ -z "$device" -o 1 -ne "$enabled" ] && {
 		return 1 
 	}
+
+	# disable flow cache if bandwidth limit is enabled
+	[ -f /usr/sbin/fcctl ] && fcctl disable >/dev/null 2>&1
+
 	config_get upload "$iface" upload
 	config_get_bool halfduplex "$iface" halfduplex
 	config_get download "$iface" download
@@ -379,6 +402,8 @@ add_rules() {
 		config_get target "$target" classnr
 		config_get options "$rule" options
 
+                [ -n "$target" ] || return
+
 		## If we want to override the TOS field, let's clear the DSCP field first.
 		[ ! -z "$(echo $options | grep 'TOS')" ] && {
 			s_options=${options%%TOS}
@@ -388,7 +413,7 @@ add_rules() {
 			unset iptrule
 		}
 
-		target=$(($target | ($target << 4)))
+		target="$(($target | ($target << 4)))"
 		parse_matching_rule iptrule "$rule" "$options" "$prefix" "-j MARK --set-mark $target/0xff"
 		append "$var" "$iptrule" "$N"
 	done
@@ -507,6 +532,8 @@ C="0"
 for iface in $INTERFACES; do
 	export C="$(($C + 1))"
 done
+
+[ -f /usr/sbin/fcctl ] && fcctl enable >/dev/null 2>&1
 
 [ -x /usr/sbin/ip6tables ] && {
 	iptables="ip6tables iptables"

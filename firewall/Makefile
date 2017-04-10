@@ -55,7 +55,15 @@ define Package/firewall/install
 	$(INSTALL_DATA) ./files/firewall.config $(1)/etc/config/firewall
 	$(INSTALL_DIR) $(1)/etc/
 	$(INSTALL_DATA) ./files/firewall.user $(1)/etc/firewall.user
+	$(INSTALL_DATA) ./files/firewall.dmz $(1)/etc/firewall.dmz
+	$(INSTALL_DATA) ./files/firewall.backoff $(1)/etc/firewall.backoff
+	$(INSTALL_DATA) ./files/firewall.url $(1)/etc/firewall.url
+	$(INSTALL_DATA) ./files/firewall.qos $(1)/etc/firewall.qos
 	$(INSTALL_DATA) ./files/firewall.parentalcontrol $(1)/etc/firewall.parentalcontrol
+	$(INSTALL_DIR) $(1)/lib/network
+	$(INSTALL_DATA) ./files/firewall.sh $(1)/lib/network/
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_DATA) ./files/firewall.ucidefault $(1)/etc/uci-defaults/40-firewall-add-missing-sections
 endef
 
 $(eval $(call BuildPackage,firewall))

@@ -1,0 +1,35 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+local PORTS="$(cat /tmp/fw_used_ports 2>/dev/null)"
+local enabled dmzhost exclude_ports ip6addr
+
+config_load firewall
+
+config_get enabled dmz enabled "1"
+config_get dmzhost dmz host
+config_get ip6addr dmz ip6addr
+
+[ "$enabled" == "1" ] || exit 0
+[ -n "$dmzhost" ] || exit 0
+
+PORTS="$(echo $PORTS | tr ' ' ',' | sed 's/^[ \t,]*//;s/[ \t,]*$//')"
+
+iptables -t filter -I zone_wan_forward -d $dmzhost -m comment --comment DMZ_Host -j ACCEPT
+if [ -n "$PORTS" ]; then
+	iptables -t nat -I zone_wan_prerouting -p tcp --match multiport ! --dports $PORTS -m comment --comment DMZ_Host_TCP -j DNAT --to-destination $dmzhost
+	iptables -t nat -I zone_wan_prerouting -p udp --match multiport ! --dports $PORTS -m comment --comment DMZ_Host_UDP -j DNAT --to-destination $dmzhost
+	if [ -n "$ip6addr" ]; then 
+		ip6tables -t filter -A zone_wan_forward -p tcp --match multiport ! --dports $PORTS -d $ip6addr -m comment --comment DMZ_Host6 -j zone_lan_dest_ACCEPT
+		ip6tables -t filter -A zone_wan_forward -p udp --match multiport ! --dports $PORTS -d $ip6addr -m comment --comment DMZ_Host6 -j zone_lan_dest_ACCEPT
+	fi
+else
+	iptables -t nat -I zone_wan_prerouting -p udp -m comment --comment DMZ_Host_TCP -j DNAT --to-destination $dmzhost
+	iptables -t nat -I zone_wan_prerouting -p tcp -m comment --comment DMZ_Host_TCP -j DNAT --to-destination $dmzhost
+	if [ -n "$ip6addr" ]; then 
+		ip6tables -t filter -A zone_wan_forward -p tcp -d $ip6addr -m comment --comment DMZ_Host6 -j zone_lan_dest_ACCEPT
+		ip6tables -t filter -A zone_wan_forward -p udp -d $ip6addr -m comment --comment DMZ_Host6 -j zone_lan_dest_ACCEPT
+	fi
+fi
+

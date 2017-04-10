@@ -119,8 +119,6 @@ vif_settings() {
 	esac
 	maclist="$(uci -q get wireless.$cfg.maclist | tr ' ' ';')"
 
-	VNO=$((_VIFNUM + 1 ))
-
 	case "$mode" in
 		sta|wet)
 			# check if we should touch the .dat file			
@@ -152,6 +150,7 @@ vif_settings() {
 			fi			
 			;;
 		*)
+			VNO=$((_VIFNUM + 1 ))
 			if [ $_DAT == 1 ]; then			
 				sed -i "s/ApCliEnable=.*/ApCliEnable=0/g" $CONFILE
 
@@ -216,8 +215,7 @@ configure_vif() {
 
 	vif_settings $vif $iface
 
-
-	_VIFNUM=$((_VIFNUM+1))
+	[ "$mode" == "sta" -o "$mode" == "wet" ] || _VIFNUM=$((_VIFNUM+1))
 }
 
 wdev_settings() {

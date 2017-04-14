@@ -951,17 +951,15 @@ configure_wifi() {
 	if [ $_REPEATER -eq 1 ]; then
 		# open a tcp socket and wait for
 		# master AP to push new configuration
-		killall -9 wificontrol >/dev/null 2>&1
-		sleep 1
-		wificontrol --repeater &
+		pidof wificontrol || wificontrol --repeater &
 	else
-		killall -9 wificontrol >/dev/null 2>&1
-		local repeaterready
-		repeaterready="$(uci -q get netmode.setup.repeaterready)"
-		if [ "$repeaterready" == "1" ]; then
-			wificontrol --repeater &
+		local repeaterready=$(uci -q get netmode.setup.repeaterready)
+
+		if [ "$repeaterready" == "1" ] ; then
+			pidof wificontrol || wificontrol --repeater &
 		else
 			# configure connected repeaters/extenders
+			killall -9 wificontrol >/dev/null 2>&1
 			wificontrol --router
 		fi
 	fi

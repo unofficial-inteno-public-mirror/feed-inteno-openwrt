@@ -17,6 +17,8 @@ local _ACSIFS=
 local _OLDCRONMD5=
 local _NEWCRONMD5=
 local _REPEATER=0
+local BRADIO=""
+local BCHANSPEC=""
 
 wifi_detect() {
 	local WLDIR="/tmp/wireless"
@@ -844,6 +846,10 @@ wdev_settings() {
 				channell="${channel}l"
 				channelu="${channel}u"
 				chanspec=$(wlctl -i $device chanspecs -b $freq -w 40 | grep -w "$channell\|$channelu" | awk '{print$1}' | head -1)
+				[ "$band" == "b" ] && {
+					BRADIO="$device"
+					BCHANSPEC="$chanspec"
+				}
 			elif [ "$bandwidth" == "80" ]; then
 				chanspec="$channel/80"
 			elif [ "$bandwidth" == "160" ]; then
@@ -1384,6 +1390,14 @@ esac
 
 exec >/dev/null 2>&1
 configure_wifi
+
+if [ -n "$BCHANSPEC" ]; then
+	wlctl -i $BRADIO down
+	wlctl -i $BRADIO bw_cap 2g 0x3
+	wlctl -i $BRADIO obss_coex 0
+	wlctl -i $BRADIO chanspec $BCHANSPEC
+	wlctl -i $BRADIO up
+fi
 
 # re-populate network in questd
 ubus -t 20 call router.network reload

@@ -1,24 +1,43 @@
 #!/bin/sh
 
-# Set default LAN and WAN interfaces for Iopsys
+# Set default LAN, WAN and possibly switch interfaces for Iopsys
 
 
 source /lib/functions/uci-defaults.sh
 
-
 board_config_update
 
-# Has it already been done before?
+# Have we been here done before?
 json_is_a network object && exit 0
 
 
+# LAN
 ethernetLanPorts="$(db -q get hw.board.ethernetLanPorts)"
 [ -n "$ethernetLanPorts" ] && ucidef_set_interface_lan "$ethernetLanPorts"
 
 
+# WAN
 wanEthernetPort="$(db -q get hw.board.ethernetWanPort)"
 wanEthernetPort="${wanEthernetPort:-eth0}"
 ucidef_set_interface_wan "$wanEthernetPort"
+
+
+# Switch configuration
+if db -q get hw.switch >/dev/null; then
+	ports=$(db -q get hw.switch.ports)
+	ucidef_add_switch "switch0" $ports
+
+	# Any ports?
+	for port in $(db -q get hw.switch.port); do
+		id=$(db -q get hw.${port}.id)
+		[ -n "$id" ] || continue
+
+		# Any matrix for each port?
+		matrix=$(db -q get hw.${port}.matrix)
+		[ -n "$matrix" ] && \
+			ucidef_add_switch_port_attr "switch0" $id matrix $matrix
+	done
+fi
 
 board_config_flush
 

@@ -16,7 +16,33 @@ wifibutton_action() {
 	/sbin/wifi reload &
 }
 
+get_ip_type(){
+	local ip="$1"
+	if [ -n "$(echo $ip | grep -E '^(192\.168|10\.|172\.1[6789]\.|172\.2[0-9]\.|172\.3[01]\.)')" ]; then
+		echo "public"
+	else
+		echo "private"
+	fi
+}
+
+
 wpsbutton_action () {
+	local repeaterready=$(uci -q get netmode.setup.repeaterready)
+	if [ "$repeaterready" -ne 1 ]; then
+		activate_wps
+		return
+	fi
+	. /lib/functions/network.sh
+	local ip
+	network_get_ipaddr ip wan
+	if [ "$ip" -a "$(get_ip_type $ip)" == "public" ]; then
+		activate_wps
+		return
+	fi
+	wpscbutton_action
+}
+
+activate_wps() {
 	enable_wps() {
 		local ifname mode wps_pbc
 		config_get ifname "$1" ifname
@@ -58,7 +84,6 @@ activate_wps_enrollee() {
 }
 
 wpscbutton_action () {
-	local wanbaseif="eth0.2"
 	local cur_mode=$(uci -q get netmode.setup.curmode)
 	local wet_iface wet_ssid carrier fl link
 	local wps_paired=0

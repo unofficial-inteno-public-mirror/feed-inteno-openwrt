@@ -16,7 +16,7 @@ copy_config_from() {
 
 	save_selected_backup_files() {
 		config_get conservative_keep $1 conservative_keep "0"
-		if [ "$conservative_keep" == "1" ]; then
+		if [ "$conservative_keep" = "1" ]; then
 			config_get file "$1" file
 			for f in $file; do
 				FILES="$FILES $f"
@@ -54,7 +54,7 @@ copy_old_config() {
 	local new_fs_type=$2
 	local old_vol old_fs_mtd
 
-	if [ "$iVersion" == "04 " -a "$new_fs_type" == "ubifs" ]; then
+	if [ "$iVersion" = "04" -a "$new_fs_type" = "ubifs" ]; then
 
 		# ubifs -> ubifs upgrade
 		echo "Upgrading $new_fs_type from iVersion 4"
@@ -73,12 +73,11 @@ copy_old_config() {
 		fi
 		umount /mnt
 
-	elif [ "$iVersion" == "03 " ]; then
-
+	elif [ "$iVersion" = "03" ]; then
 		# jffs2 -> jffs2/ubifs upgrade
 		echo "Upgrading $new_fs_type from iVersion 3"
 
-		if [ "$new_fs_type" == "jffs2" ]; then
+		if [ "$new_fs_type" = "jffs2" ]; then
 			old_fs_mtd="mtd:rootfs_update"
 		elif brcm_fw_tool -i update /dev/mtd6 >/dev/null 2>&1; then
 			# was there a jffs2 partition?
@@ -98,7 +97,7 @@ copy_old_config() {
 			umount /mnt
 		fi
 	else
-		if [ "$new_fs_type" == "jffs2" ]; then
+		if [ "$new_fs_type" = "jffs2" ]; then
 			# IOP2 jffs2 layout -> IOP3 jffs2 upgrade
 			echo "Upgrading $new_fs_type from unknown iVersion"
 			echo "Mount mtd:rootfs_update_data on /mnt"
@@ -212,12 +211,12 @@ iopsys_upgrade_handling() {
 		fs_type=$(awk '/jffs2|ubifs/ { print $3 }' </proc/mounts)
 	else
 		# mediatek
-		iVersion="04 "
+		iVersion="04"
 		fs_type="ubifs"
 	fi
 	copy_old_config "$iVersion" "$fs_type"
 
-	if [ "$iVersion" == "04 " -o "$fs_type" == "jffs2" ]; then
+	if [ "$iVersion" = "04" -o "$fs_type" = "jffs2" ]; then
 		# upgrading ubifs -> ubifs or jffs2 -> jffs2
 		umount /proc
 		rm /IOP3

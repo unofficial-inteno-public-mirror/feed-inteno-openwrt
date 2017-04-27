@@ -222,7 +222,13 @@ iopsys_upgrade_handling() {
 	echo "====== Start flash partition update ======"
 
 	mount tmpfs /tmp -t tmpfs -o size=100M,mode=0755
-	build_minimal_rootfs /tmp
+	build_minimal_rootfs /tmp	
+
+	# move devtmpfs into pivot and if devtmpfs
+	# isn't used create an empty tmpfs.
+	grep -qE "[[:space:]]/dev[[:space:]]" /proc/mounts || \
+		mount -t tmpfs tmpfs /dev -o mode=0755,size=512K,nosuid,noatime
+	mount -o move /dev /tmp/dev
 
 	umount /sys
 	umount /proc

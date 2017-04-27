@@ -80,18 +80,23 @@ copy_old_config() {
 
 		if [ "$new_fs_type" == "jffs2" ]; then
 			old_fs_mtd="mtd:rootfs_update"
-		else
+		elif brcm_fw_tool -i update /dev/mtd6 >/dev/null 2>&1; then
+			# was there a jffs2 partition?
 			old_fs_mtd="mtd:mtd_hi"
+		else
+			# No valid jffs2 partition, just empty flash
+			old_fs_mtd=""
 		fi
 
-		echo "Mount $old_fs_mtd on /mnt"
-		mount -t jffs2 -o ro $old_fs_mtd /mnt
-		copy_mounted_overlay
-		if [ -e /mnt/overlay/SAVE_CONFIG ]; then
-			copy_config_from /mnt/overlay
+		if [ -n "$old_fs_mtd" ]; then
+			echo "Mount $old_fs_mtd on /mnt"
+			mount -t jffs2 -o ro $old_fs_mtd /mnt
+			copy_mounted_overlay
+			if [ -e /mnt/overlay/SAVE_CONFIG ]; then
+				copy_config_from /mnt/overlay
+			fi
+			umount /mnt
 		fi
-		umount /mnt
-
 	else
 		if [ "$new_fs_type" == "jffs2" ]; then
 			# IOP2 jffs2 layout -> IOP3 jffs2 upgrade

@@ -192,7 +192,7 @@ iopsys_upgrade_handling() {
 	# need to have a writable root for the rest of the script to work
 	mount -o remount,rw /
 
-	if cat /proc/mounts | grep -q '/tmp tmpfs'; then
+	if grep -q '/tmp tmpfs' /proc/mounts; then
 		# preinit restart after upgrade jffs2 -> ubifs
 		umount /tmp
 		umount /proc

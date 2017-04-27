@@ -187,6 +187,7 @@ build_minimal_rootfs() {
 # - first boot after upgrade ubifs->ubifs
 #
 iopsys_upgrade_handling() {
+	local iVersion local fs_type
 
 	# Skip if not first boot
 	[ -e /IOP3 ] || return
@@ -205,13 +206,15 @@ iopsys_upgrade_handling() {
 		return
 	fi
 
-# ken: for broadcom
-#	local iVersion=$(cat /proc/nvram/iVersion)
-#	local fs_type=$(cat /proc/mounts |awk '/jffs2|ubifs/ {print $3}')
-#	copy_old_config "$iVersion" "$fs_type"
-# hardcode for mediatek
-	local iVersion="04 "
-	local fs_type="ubifs"
+	if [ -e /proc/nvram/iVersion ]; then
+		# for broadcom legacy
+		iVersion=$(awk '{ print $1 }' </proc/nvram/iVersion)
+		fs_type=$(awk '/jffs2|ubifs/ { print $3 }' </proc/mounts)
+	else
+		# mediatek
+		iVersion="04 "
+		fs_type="ubifs"
+	fi
 	copy_old_config "$iVersion" "$fs_type"
 
 	if [ "$iVersion" == "04 " -o "$fs_type" == "jffs2" ]; then

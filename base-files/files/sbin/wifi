@@ -965,8 +965,11 @@ configure_wifi() {
 			pidof wificontrol >/dev/null || wificontrol --repeater &
 		else
 			# configure connected repeaters/extenders
-			killall -9 wificontrol >/dev/null 2>&1
-			wificontrol --router
+			for network in $(uci show network | grep "is_lan='1'" | grep -v loopback | cut -d'.' -f2); do
+				killall -9 wificontrol >/dev/null 2>&1
+				ubus call repeater get_creds '{"network":"'$network'","file":"/tmp/wificontrol.txt"}'
+				wificontrol --router -v 4 >/dev/console
+			done
 		fi
 	fi
 

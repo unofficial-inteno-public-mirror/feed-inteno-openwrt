@@ -1,0 +1,304 @@
+diff --git a/interface-ip.c b/interface-ip.c
+index 018b657..3e0690a 100644
+--- a/interface-ip.c
++++ b/interface-ip.c
+@@ -1030,13 +1030,58 @@ interface_add_dns_search_list(struct interface_ip_settings *ip, struct blob_attr
+ 	}
+ }
+ 
++void
++interface_add_dhcp4o6_server(struct interface_ip_settings *ip, const char *str)
++{
++	struct dhcp4o6_server *s;
++
++	s = calloc(1, sizeof(*s));
++	if (!s)
++		return;
++
++	s->af = AF_INET;
++	if (inet_pton(s->af, str, &s->addr.in))
++		goto add;
++
++	s->af = AF_INET6;
++	if (inet_pton(s->af, str, &s->addr.in))
++		goto add;
++
++	free(s);
++	return;
++
++add:
++	D(INTERFACE, "Add IPv%c DHCP4o6 server: %s\n",
++	  s->af == AF_INET6 ? '6' : '4', str);
++	vlist_simple_add(&ip->dhcp4o6_servers, &s->node);
++}
++
++void
++interface_add_dhcp4o6_server_list(struct interface_ip_settings *ip, struct blob_attr *list)
++{
++	struct blob_attr *cur;
++	int rem;
++
++	blobmsg_for_each_attr(cur, list, rem) {
++		if (blobmsg_type(cur) != BLOBMSG_TYPE_STRING)
++			continue;
++
++		if (!blobmsg_check_attr(cur, NULL))
++			continue;
++
++		interface_add_dhcp4o6_server(ip, blobmsg_data(cur));
++	}
++}
++
+ static void
+ write_resolv_conf_entries(FILE *f, struct interface_ip_settings *ip, const char *dev)
+ {
+ 	struct dns_server *s;
+ 	struct dns_search_domain *d;
++	struct dhcp4o6_server *h;
+ 	const char *str;
+ 	char buf[INET6_ADDRSTRLEN];
++	char buf_dhcp4o6[INET6_ADDRSTRLEN];
+ 
+ 	vlist_simple_for_each_element(&ip->dns_servers, s, node) {
+ 		str = inet_ntop(s->af, &s->addr, buf, sizeof(buf));
+@@ -1052,6 +1097,14 @@ write_resolv_conf_entries(FILE *f, struct interface_ip_settings *ip, const char
+ 	vlist_simple_for_each_element(&ip->dns_search, d, node) {
+ 		fprintf(f, "search %s\n", d->name);
+ 	}
++
++	vlist_simple_for_each_element(&ip->dhcp4o6_servers, h, node) {
++		str = inet_ntop(h->af, &h->addr, buf_dhcp4o6, sizeof(buf_dhcp4o6));
++		if (!str)
++			continue;
++
++		fprintf(f, "dhcp4o6 %s\n", str);
++	}
+ }
+ 
+ void
+@@ -1076,8 +1129,10 @@ interface_write_resolv_conf(void)
+ 
+ 		if (vlist_simple_empty(&iface->proto_ip.dns_search) &&
+ 		    vlist_simple_empty(&iface->proto_ip.dns_servers) &&
++		    vlist_simple_empty(&iface->proto_ip.dhcp4o6_servers) &&
+ 			vlist_simple_empty(&iface->config_ip.dns_search) &&
+-		    vlist_simple_empty(&iface->config_ip.dns_servers))
++		    vlist_simple_empty(&iface->config_ip.dns_servers) &&
++		    vlist_simple_empty(&iface->config_ip.dhcp4o6_servers))
+ 			continue;
+ 
+ 		fprintf(f, "# Interface %s\n", iface->name);
+@@ -1168,6 +1223,7 @@ interface_ip_update_start(struct interface_ip_settings *ip)
+ 	if (ip != &ip->iface->config_ip) {
+ 		vlist_simple_update(&ip->dns_servers);
+ 		vlist_simple_update(&ip->dns_search);
++		vlist_simple_update(&ip->dhcp4o6_servers);
+ 	}
+ 	vlist_update(&ip->route);
+ 	vlist_update(&ip->addr);
+@@ -1179,6 +1235,7 @@ interface_ip_update_complete(struct interface_ip_settings *ip)
+ {
+ 	vlist_simple_flush(&ip->dns_servers);
+ 	vlist_simple_flush(&ip->dns_search);
++	vlist_simple_flush(&ip->dhcp4o6_servers);
+ 	vlist_flush(&ip->route);
+ 	vlist_flush(&ip->addr);
+ 	vlist_flush(&ip->prefix);
+@@ -1192,6 +1249,7 @@ interface_ip_flush(struct interface_ip_settings *ip)
+ 		vlist_flush_all(&ip->iface->host_routes);
+ 	vlist_simple_flush_all(&ip->dns_servers);
+ 	vlist_simple_flush_all(&ip->dns_search);
++	vlist_simple_flush_all(&ip->dhcp4o6_servers);
+ 	vlist_flush_all(&ip->route);
+ 	vlist_flush_all(&ip->addr);
+ 	vlist_flush_all(&ip->prefix);
+@@ -1204,6 +1262,7 @@ __interface_ip_init(struct interface_ip_settings *ip, struct interface *iface)
+ 	ip->enabled = true;
+ 	vlist_simple_init(&ip->dns_search, struct dns_search_domain, node);
+ 	vlist_simple_init(&ip->dns_servers, struct dns_server, node);
++	vlist_simple_init(&ip->dhcp4o6_servers, struct dhcp4o6_server, node);
+ 	vlist_init(&ip->route, route_cmp, interface_update_proto_route);
+ 	vlist_init(&ip->addr, addr_cmp, interface_update_proto_addr);
+ 	vlist_init(&ip->prefix, prefix_cmp, interface_update_prefix);
+diff --git a/interface-ip.h b/interface-ip.h
+index de8343d..f7f77bc 100644
+--- a/interface-ip.h
++++ b/interface-ip.h
+@@ -136,6 +136,12 @@ struct dns_search_domain {
+ 	char name[];
+ };
+ 
++struct dhcp4o6_server {
++	struct vlist_simple_node node;
++	int af;
++	union if_addr addr;
++};
++
+ extern const struct uci_blob_param_list route_attr_list;
+ extern struct list_head prefixes;
+ 
+@@ -143,6 +149,8 @@ void interface_ip_init(struct interface *iface);
+ void interface_add_dns_server(struct interface_ip_settings *ip, const char *str);
+ void interface_add_dns_server_list(struct interface_ip_settings *ip, struct blob_attr *list);
+ void interface_add_dns_search_list(struct interface_ip_settings *ip, struct blob_attr *list);
++void interface_add_dhcp4o6_server(struct interface_ip_settings *ip, const char *str);
++void interface_add_dhcp4o6_server_list(struct interface_ip_settings *ip, struct blob_attr *list);
+ void interface_write_resolv_conf(void);
+ 
+ void interface_ip_add_route(struct interface *iface, struct blob_attr *attr, bool v6);
+diff --git a/interface.c b/interface.c
+index 95e1ee8..077205e 100644
+--- a/interface.c
++++ b/interface.c
+@@ -41,6 +41,7 @@ enum {
+ 	IFACE_ATTR_IP6HINT,
+ 	IFACE_ATTR_IP4TABLE,
+ 	IFACE_ATTR_IP6TABLE,
++    IFACE_ATTR_DHCP4o6,
+ 	IFACE_ATTR_IP6CLASS,
+ 	IFACE_ATTR_DELEGATE,
+ 	IFACE_ATTR_FORCE_LINK,
+@@ -61,6 +62,7 @@ static const struct blobmsg_policy iface_attrs[IFACE_ATTR_MAX] = {
+ 	[IFACE_ATTR_IP6HINT] = { .name = "ip6hint", .type = BLOBMSG_TYPE_STRING },
+ 	[IFACE_ATTR_IP4TABLE] = { .name = "ip4table", .type = BLOBMSG_TYPE_STRING },
+ 	[IFACE_ATTR_IP6TABLE] = { .name = "ip6table", .type = BLOBMSG_TYPE_STRING },
++	[IFACE_ATTR_DHCP4o6] = { .name = "dhcp4o6", .type = BLOBMSG_TYPE_ARRAY},
+ 	[IFACE_ATTR_IP6CLASS] = { .name = "ip6class", .type = BLOBMSG_TYPE_ARRAY },
+ 	[IFACE_ATTR_DELEGATE] = { .name = "delegate", .type = BLOBMSG_TYPE_BOOL },
+ 	[IFACE_ATTR_FORCE_LINK] = { .name = "force_link", .type = BLOBMSG_TYPE_BOOL },
+@@ -700,6 +702,9 @@ interface_alloc(const char *name, struct blob_attr *config)
+ 			DPRINTF("Failed to resolve routing table: %s\n", (char *) blobmsg_data(cur));
+ 	}
+ 
++	if ((cur = tb[IFACE_ATTR_DHCP4o6]))
++		interface_add_dhcp4o6_server_list(&iface->config_ip, cur);
++
+ 	iface->proto_ip.no_delegation = !blobmsg_get_bool_default(tb[IFACE_ATTR_DELEGATE], true);
+ 
+ 	iface->config_autostart = iface->autostart;
+diff --git a/interface.h b/interface.h
+index 6cfe264..81477a9 100644
+--- a/interface.h
++++ b/interface.h
+@@ -75,6 +75,7 @@ struct interface_ip_settings {
+ 
+ 	struct vlist_simple_tree dns_servers;
+ 	struct vlist_simple_tree dns_search;
++	struct vlist_simple_tree dhcp4o6_servers;
+ };
+ 
+ struct interface_data {
+diff --git a/proto-shell.c b/proto-shell.c
+index c4039ed..146840e 100644
+--- a/proto-shell.c
++++ b/proto-shell.c
+@@ -392,6 +392,7 @@ enum {
+ 	NOTIFY_HOST,
+ 	NOTIFY_DNS,
+ 	NOTIFY_DNS_SEARCH,
++	NOTIFY_DHCP4o6,
+ 	__NOTIFY_LAST
+ };
+ 
+@@ -413,6 +414,7 @@ static const struct blobmsg_policy notify_attr[__NOTIFY_LAST] = {
+ 	[NOTIFY_HOST] = { .name = "host", .type = BLOBMSG_TYPE_STRING },
+ 	[NOTIFY_DNS] = { .name = "dns", .type = BLOBMSG_TYPE_ARRAY },
+ 	[NOTIFY_DNS_SEARCH] = { .name = "dns_search", .type = BLOBMSG_TYPE_ARRAY },
++	[NOTIFY_DHCP4o6] = { .name = "dhcp4o6", .type = BLOBMSG_TYPE_ARRAY },
+ };
+ 
+ static int
+@@ -483,6 +485,9 @@ proto_shell_update_link(struct proto_shell_state *state, struct blob_attr *data,
+ 	if ((cur = tb[NOTIFY_DNS_SEARCH]))
+ 		interface_add_dns_search_list(&iface->proto_ip, cur);
+ 
++	if ((cur = tb[NOTIFY_DHCP4o6]))
++		interface_add_dhcp4o6_server_list(&iface->proto_ip, cur);
++
+ 	if ((cur = tb[NOTIFY_DATA]))
+ 		proto_shell_parse_data(state->proto.iface, cur);
+ 
+diff --git a/scripts/netifd-proto.sh b/scripts/netifd-proto.sh
+index ce316c4..f307131 100644
+--- a/scripts/netifd-proto.sh
++++ b/scripts/netifd-proto.sh
+@@ -47,6 +47,7 @@ proto_init_update() {
+ 	PROTO_PREFIX6=
+ 	PROTO_DNS=
+ 	PROTO_DNS_SEARCH=
++	PROTO_DHCP4o6=
+ 	json_init
+ 	json_add_int action 0
+ 	[ -n "$ifname" -a "*" != "$ifname" ] && json_add_string "ifname" "$ifname"
+@@ -96,6 +97,12 @@ proto_add_dns_search() {
+ 	append PROTO_DNS_SEARCH "$address"
+ }
+ 
++proto_add_dhcp4o6_server() {
++	local address="$1"
++
++	append PROTO_DHCP4o6 "$address"
++}
++
+ proto_add_ipv4_address() {
+ 	local address="$1"
+ 	local mask="$2"
+@@ -254,6 +261,7 @@ proto_send_update() {
+ 	_proto_push_array "ip6prefix" "$PROTO_PREFIX6" _proto_push_string
+ 	_proto_push_array "dns" "$PROTO_DNS" _proto_push_string
+ 	_proto_push_array "dns_search" "$PROTO_DNS_SEARCH" _proto_push_string
++	_proto_push_array "dhcp4o6" "$PROTO_DHCP4o6" _proto_push_string
+ 	_proto_notify "$interface"
+ }
+ 
+diff --git a/ubus.c b/ubus.c
+index 02becf2..39590dc 100644
+--- a/ubus.c
++++ b/ubus.c
+@@ -639,6 +639,24 @@ interface_ip_dump_dns_search_list(struct interface_ip_settings *ip,
+ }
+ 
+ static void
++interface_ip_dump_dhcp4o6_server_list(struct interface_ip_settings *ip,
++                                  bool enabled)
++{
++	struct dhcp4o6_server *dhcp4o6;
++	int buflen = 128;
++	char *buf;
++
++	vlist_simple_for_each_element(&ip->dhcp4o6_servers, dhcp4o6, node) {
++//		if (ip->no_dhcp4o6 == enabled)
++//			continue;
++
++		buf = blobmsg_alloc_string_buffer(&b, NULL, buflen);
++		inet_ntop(dhcp4o6->af, &dhcp4o6->addr, buf, buflen);
++		blobmsg_add_string_buffer(&b);
++	}
++}
++
++static void
+ netifd_dump_status(struct interface *iface)
+ {
+ 	struct interface_data *data;
+@@ -714,6 +732,10 @@ netifd_dump_status(struct interface *iface)
+ 		interface_ip_dump_dns_search_list(&iface->config_ip, true);
+ 		interface_ip_dump_dns_search_list(&iface->proto_ip, true);
+ 		blobmsg_close_array(&b, a);
++		a = blobmsg_open_array(&b, "dhcp4o6-servers");
++		interface_ip_dump_dhcp4o6_server_list(&iface->config_ip, true);
++		interface_ip_dump_dhcp4o6_server_list(&iface->proto_ip, true);
++		blobmsg_close_array(&b, a);
+ 
+ 		inactive = blobmsg_open_table(&b, "inactive");
+ 		a = blobmsg_open_array(&b, "ipv4-address");
+@@ -736,6 +758,10 @@ netifd_dump_status(struct interface *iface)
+ 		interface_ip_dump_dns_search_list(&iface->config_ip, false);
+ 		interface_ip_dump_dns_search_list(&iface->proto_ip, false);
+ 		blobmsg_close_array(&b, a);
++		a = blobmsg_open_array(&b, "dhcp4o6-servers");
++		interface_ip_dump_dhcp4o6_server_list(&iface->config_ip, false);
++		interface_ip_dump_dhcp4o6_server_list(&iface->proto_ip, false);
++		blobmsg_close_array(&b, a);
+ 		blobmsg_close_table(&b, inactive);
+ 	}
+ 

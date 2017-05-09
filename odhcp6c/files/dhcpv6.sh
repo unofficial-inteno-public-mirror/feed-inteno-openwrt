@@ -29,6 +29,13 @@ proto_dhcpv6_init_config() {
 	proto_config_add_int "soltimeout"
 	proto_config_add_boolean fakeroutes
 	proto_config_add_boolean sourcefilter
+
+	proto_config_add_int "request_na"
+	proto_config_add_int "request_pd"
+	proto_config_add_boolean "no_accept_reconfigure"
+	proto_config_add_boolean "no_client_fqdn"
+
+	proto_config_add_boolean "use_softwire"
 }
 
 proto_dhcpv6_setup() {
@@ -36,15 +43,24 @@ proto_dhcpv6_setup() {
 	local iface="$2"
 
 	local reqaddress reqprefix clientid reqopts noslaaconly forceprefix norelease ip6prefix iface_dslite iface_map iface_464xlat ifaceid userclass vendorclass delegate zone_dslite zone_map zone_464xlat zone soltimeout fakeroutes sourcefilter
-	json_get_vars reqaddress reqprefix clientid reqopts noslaaconly forceprefix norelease ip6prefix iface_dslite iface_map iface_464xlat ifaceid userclass vendorclass delegate zone_dslite zone_map zone_464xlat zone soltimeout fakeroutes sourcefilter
+	local request_na request_pd no_accept_reconfigure no_client_fqdn use_softwire
+	json_get_vars reqaddress reqprefix clientid reqopts noslaaconly forceprefix norelease ip6prefix iface_dslite iface_map iface_464xlat ifaceid userclass vendorclass delegate zone_dslite zone_map zone_464xlat zone soltimeout fakeroutes sourcefilter request_na request_pd no_accept_reconfigure no_client_fqdn use_softwire
 
 
 	# Configure
 	local opts=""
+	[ "$request_na" = 0 ] && reqaddress="none"
+
 	[ -n "$reqaddress" ] && append opts "-N$reqaddress"
 
-	[ -z "$reqprefix" -o "$reqprefix" = "auto" ] && reqprefix=0
-	[ "$reqprefix" != "no" ] && append opts "-P$reqprefix"
+	if [ "$request_pd" -gt 0 ]; then
+		[ "$request_pd" -gt 0 ] && append opts "-P 0,_ANY"
+		[ "$request_pd" -gt 1 ] && append opts "-P 0,IPTV"
+		[ "$request_pd" -gt 2 ] && append opts "-P 0,VOIP"
+	else
+		[ -z "$reqprefix" -o "$reqprefix" = "auto" ] && reqprefix=0
+		[ "$reqprefix" != "no" ] && append opts "-P$reqprefix"
+	fi
 
 	[ -n "$clientid" ] && append opts "-c$clientid"
 
@@ -56,6 +72,8 @@ proto_dhcpv6_setup() {
 
 	[ -n "$ifaceid" ] && append opts "-i$ifaceid"
 
+	[ -z "$vendorclass" ] && vendorclass="00000B790006542D4C414253"
+
 	[ -n "$vendorclass" ] && append opts "-V$vendorclass"
 
 	[ -n "$userclass" ] && append opts "-u$userclass"
@@ -65,6 +83,8 @@ proto_dhcpv6_setup() {
 	done
 
 	append opts "-t${soltimeout:-120}"
+	append opts "-m 10"
+	append opts "-R"
 
 	[ -n "$ip6prefix" ] && proto_export "USERPREFIX=$ip6prefix"
 	[ -n "$iface_dslite" ] && proto_export "IFACE_DSLITE=$iface_dslite"
@@ -78,6 +98,7 @@ proto_dhcpv6_setup() {
 	[ -n "$zone" ] && proto_export "ZONE=$zone"
 	[ "$fakeroutes" != "0" ] && proto_export "FAKE_ROUTES=1"
 	[ "$sourcefilter" = "0" ] && proto_export "NOSOURCEFILTER=1"
+	[ -n "$use_softwire" ] && proto_export "USE_SOFTWIRE=1"
 
 	proto_export "INTERFACE=$config"
 	proto_run_command "$config" odhcp6c \
@@ -95,6 +116,8 @@ proto_dhcpv6_renew() {
 proto_dhcpv6_teardown() {
 	local interface="$1"
 	proto_kill_command "$interface"
+	ifdown "${interface}_b4"
+	ifdown "${interface}_d4o6"
 }
 
 add_protocol dhcpv6

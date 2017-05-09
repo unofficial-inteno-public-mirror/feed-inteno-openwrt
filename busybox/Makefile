@@ -12,10 +12,11 @@ PKG_VERSION:=1.23.2
 PKG_RELEASE:=1
 PKG_FLAGS:=essential
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=http://www.busybox.net/downloads \
-		http://distfiles.gentoo.org/distfiles/
-PKG_MD5SUM:=7925683d7dd105aabe9b6b618d48cc73
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/terastream/busybox.git
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=74819c9d21427422f42d76141f23ffc1f3cb1a13
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 
 PKG_BUILD_DEPENDS:=BUSYBOX_USE_LIBRPC:librpc BUSYBOX_CONFIG_PAM:libpam
 PKG_BUILD_PARALLEL:=1

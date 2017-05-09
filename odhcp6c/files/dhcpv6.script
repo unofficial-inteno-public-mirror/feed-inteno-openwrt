@@ -1,13 +1,29 @@
 #!/bin/sh
 [ -z "$2" ] && echo "Error: should be run by odhcpc6c" && exit 1
 . /lib/functions.sh
+. /lib/functions/network.sh
 . /lib/netifd/netifd-proto.sh
+
+host_address_from_prefix() {
+	local prefix=$1
+
+	[ -z "$prefix" ] && return 1
+
+	prefix="$(echo ${prefix} | ipv6calc --printuncompressed | cut -d ':' -f -7):1"
+
+	ipv6calc --in ipv6addr --out ipv6addr "$prefix"
+
+	return 0
+}
 
 setup_interface () {
 	local device="$1"
 	local prefsig=""
 	local addrsig=""
 	proto_init_update "*" 1
+
+	# TODO: calculate this based on configured MTU
+	local sw_mtu=1500
 
 	# Merge RA-DNS
 	for radns in $RA_DNS; do
@@ -45,6 +61,15 @@ setup_interface () {
 		if [ -z "$RA_ADDRESSES" -a -z "$RA_ROUTES" -a \
 				-z "$RA_DNS" -a "$FAKE_ROUTES" = 1 ]; then
 			RA_ROUTES="::/0,$SERVER,$valid,4096"
+		fi
+
+		local iaid="${prefix#*,class=*}"
+		if [ "$iaid" = "564f4950" ]; then
+			local prefix_info="${prefix%%,*}"
+			local voip_address=$(host_address_from_prefix "${prefix_info%/*}")
+			if [ -n "$voip_address" ]; then
+				uci_set_state network $INTERFACE sip_bindaddr "$voip_address"
+			fi
 		fi
 	done
 
@@ -113,23 +138,129 @@ setup_interface () {
 	[ -n "$CER" ] && json_add_string cer "$CER"
 	[ -n "$PASSTHRU" ] && json_add_string passthru "$PASSTHRU"
 	[ -n "$ZONE" ] && json_add_string zone "$ZONE"
+
+	local SNTP_SERVERS="$NTP_IP $NTP_FQDN $SNTP_IP"
+	if [ -n "$SNTP_SERVERS" ]; then
+		local server
+
+		json_add_array sntpservers
+		for server in $SNTP_SERVERS; do
+			json_add_string "" "$server"
+		done
+		json_close_array
+	fi
+
+	[ -n "$SIP_DOMAIN" ] && json_add_string "sipdomain" "$SIP_DOMAIN"
+	[ -n "$NCS" ] && json_add_string "_x_ncs" "$NCS"
+
+	MAPTYPE=""
+	MAPRULE=""
+	S46_TYPES=""
+	FALLBACK=""
+
+	if [ -n "$MAPE" -a -f /lib/netifd/proto/map.sh ]; then
+		S46_TYPES="$S46_TYPES map-e"
+		[ -n "$FALLBACK" ] || FALLBACK="map-e"
+	fi
+	if [ -n "$MAPT" -a -f /lib/netifd/proto/map.sh -a -f /proc/net/nat46/control ]; then
+		S46_TYPES="$S46_TYPES map-t"
+		[ -n "$FALLBACK" ] || FALLBACK="map-t"
+	fi
+	if [ -n "$LW4O6" -a -f /lib/netifd/proto/map.sh ]; then
+		S46_TYPES="$S46_TYPES lw4o6"
+		[ -n "$FALLBACK" ] || FALLBACK="lw4o6"
+	fi
+	if [ -n "$DHCP4_O_DHCP6_SERVERS_88" ]; then
+		S46_TYPES="$S46_TYPES dhcp4o6"
+		[ -n "$FALLBACK" ] || FALLBACK="dhcp4o6"
+	fi
+	if [ -n "$DHCP4_O_DHCP6_SERVERS_99" ]; then
+		S46_TYPES="$S46_TYPES 99"
+		[ -n "$FALLBACK" ] || FALLBACK="99"
+	fi
+	if [ -n "$AFTR_IP" -a -f /lib/netifd/proto/dslite.sh ]; then
+		S46_TYPES="$S46_TYPES ds-lite"
+		[ -n "$FALLBACK" ] || FALLBACK="ds-lite"
+	fi
+
+	for prio in $S46_PRIO; do
+		for type in $S46_TYPES; do
+			if [ "$prio" = "$type" ]; then
+				MAPTYPE=$prio
+				break
+			fi
+		done
+		[ -n "$MAPTYPE" ] && break
+	done
+
+
+	[ -n "$MAPTYPE" ] || MAPTYPE=$FALLBACK
+
+	case "$MAPTYPE" in
+		"map-e")
+			MAPRULE="$MAPE"
+			;;
+		"map-t")
+			MAPRULE="$MAPT"
+			;;
+		"lw4o6")
+			MAPRULE="$LW4O6"
+			;;
+		"dhcp4o6")
+			DHCP4_O_DHCP6_SERVERS="$DHCP4_O_DHCP6_SERVERS_88"
+			DHCP4_O_DHCP6_MODE="rfc7341"
+			;;
+		"99")
+			DHCP4_O_DHCP6_SERVERS="$DHCP4_O_DHCP6_SERVERS_99"
+			DHCP4_O_DHCP6_MODE="terastream"
+			;;
+
+		"ds-lite")
+			;;
+		*)
+			MAPTYPE=""
+			;;
+	esac
+
+	if [ -n "$DHCP4_O_DHCP6_SERVERS" ]; then
+		local server
+
+		json_add_string "dhcp4o6mode" "$DHCP4_O_DHCP6_MODE"
+
+		json_add_array dhcp4o6servers
+		for server in $DHCP4_O_DHCP6_SERVERS; do
+			json_add_string "" "$server"
+		done
+		json_close_array
+	fi
+
+	if [ -n "$SYSLOG_COLLECTORS" ]; then
+		local server
+
+		json_add_array syslog_collectors
+		for server in $SYSLOG_COLLECTORS; do
+			json_add_string "" "$server"
+		done
+		json_close_array
+	fi
+
 	proto_close_data
 
 	proto_send_update "$INTERFACE"
 
-	MAPTYPE=""
-	MAPRULE=""
-
-	if [ -n "$MAPE" -a -f /lib/netifd/proto/map.sh ]; then
-		MAPTYPE="map-e"
-		MAPRULE="$MAPE"
-	elif [ -n "$MAPT" -a -f /lib/netifd/proto/map.sh -a -f /proc/net/nat46/control ]; then
-		MAPTYPE="map-t"
-		MAPRULE="$MAPT"
-	elif [ -n "$LW4O6" -a -f /lib/netifd/proto/map.sh ]; then
-		MAPTYPE="lw4o6"
-		MAPRULE="$LW4O6"
+	if [ -z "$MAPRULE" -a -n "$OPTION_199" ]; then
+		b4addr=$(ipv6calc --in ifinet6 --out ipv6addr "$OPTION_199")
+		json_init
+		json_add_string name "${INTERFACE}_b4"
+		json_add_string ifname "@${INTERFACE}"
+		json_add_string proto "static"
+		json_add_array ip6addr
+		json_add_string "" "$b4addr"
+		json_close_array
+		json_close_object
+		ubus -S call network add_dynamic "$(json_dump)"
 	fi
+
 
 	[ -n "$ZONE" ] || ZONE=$(fw3 -q network $INTERFACE 2>/dev/null)
 
@@ -144,19 +275,44 @@ setup_interface () {
 		[ "$MAPTYPE" = lw4o6 ] && json_add_string _addrsig "$addrsig"
 		json_add_string rule "$MAPRULE"
 		json_add_string tunlink "$INTERFACE"
+		json_add_int mtu "$sw_mtu"
 		[ -n "$ZONE_MAP" ] || ZONE_MAP=$ZONE
 		[ -n "$ZONE_MAP" ] && json_add_string zone "$ZONE_MAP"
 		[ -n "$IFACE_MAP_DELEGATE" ] && json_add_boolean delegate "$IFACE_MAP_DELEGATE"
 		json_close_object
-		ubus call network add_dynamic "$(json_dump)"
+		ubus -S call network add_dynamic "$(json_dump)"
+	elif [ -n "$DHCP4_O_DHCP6_SERVERS" -a -n "$b4addr" ]; then
+		json_init
+		json_add_string name "${INTERFACE}_d4o6"
+		json_add_string ifname "@$INTERFACE"
+		json_add_string tunlink "$INTERFACE"
+		json_add_int mtu "$sw_mtu"
+		json_add_string proto dhcpv4ov6
+		json_add_string mode lw4o6
+		json_add_string dhcp_mode "$DHCP4_O_DHCP6_MODE"
+		json_add_string dhcp_servers "$DHCP4_O_DHCP6_SERVERS"
+		if [ -n "$OPTION_1" ]; then
+			json_add_string clientid "ff00000000${OPTION_1}"
+		fi
+		# tunnel parameters
+		[ -n "$b4addr" ] && json_add_string aftr_local "$b4addr"
+		json_add_string aftr_remote "$AFTR"
+		json_close_object
+		ubus -S call network add_dynamic "$(json_dump)"
 	elif [ -n "$AFTR" -a "$IFACE_DSLITE" != 0 -a -f /lib/netifd/proto/dslite.sh ]; then
 		[ -z "$IFACE_DSLITE" -o "$IFACE_DSLITE" = 1 ] && IFACE_DSLITE=${INTERFACE}_4
+
+		# hackfix: clear network on errors, else netifd won't retry
+		network_is_up "$IFACE_DSLITE" || ifdown "$IFACE_DSLITE" > /dev/null
+
 		json_init
 		json_add_string name "$IFACE_DSLITE"
 		json_add_string ifname "@$INTERFACE"
 		json_add_string proto "dslite"
+		[ -n "$b4addr" ] && json_add_string ip6addr "$b4addr"
 		json_add_string peeraddr "$AFTR"
 		json_add_string tunlink "$INTERFACE"
+		json_add_int mtu "$sw_mtu"
 		[ -n "$ZONE_DSLITE" ] || ZONE_DSLITE=$ZONE
 		[ -n "$ZONE_DSLITE" ] && json_add_string zone "$ZONE_DSLITE"
 		[ -n "$IFACE_DSLITE_DELEGATE" ] && json_add_boolean delegate "$IFACE_DSLITE_DELEGATE"
@@ -184,13 +340,20 @@ setup_interface () {
 	[ -n "$RA_REACHABLE" ] && [ "$RA_REACHABLE" -gt 0 ] && echo "$RA_REACHABLE" > /proc/sys/net/ipv6/neigh/$device/base_reachable_time_ms
 	[ -n "$RA_RETRANSMIT" ] && [ "$RA_RETRANSMIT" -gt 0 ] && echo "$RA_RETRANSMIT" > /proc/sys/net/ipv6/neigh/$device/retrans_time_ms
 
-	# TODO: $SNTP_IP $SIP_IP $SNTP_FQDN $SIP_DOMAIN
+	uci_set_state network $INTERFACE sip_domain "$SIP_DOMAIN"
+
+	# asterisk-uci handles non-changes
+	/etc/init.d/asterisk-uci reload
+
+	# TODO: handle NCS
 }
 
 teardown_interface() {
 	proto_init_update "*" 0
 	proto_send_update "$INTERFACE"
 }
+
+logger -t "dhcpv6" "script: $1 - $2"
 
 case "$2" in
 	bound)

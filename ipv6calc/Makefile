@@ -24,6 +24,7 @@ define Package/ipv6calc/Default
   SECTION:=net
   CATEGORY:=Network
   URL:=http://www.deepspace6.net/projects/ipv6calc.html
+  DEPENDS:= +libopenssl
 endef
 
 define Package/ipv6calc/Default/description

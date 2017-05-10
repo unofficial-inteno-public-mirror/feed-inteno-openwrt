@@ -3,7 +3,6 @@
 
 START=99
 
-
 start() {
 
 	board=$(db get hw.board.hardware)
@@ -18,5 +17,18 @@ start() {
 		else
 			logger "phy_check: OK."
 		fi
+	fi
+	if [ "$board" = "EG400" ]
+	then
+	    # is the sfp in use ??
+	    # We assume the sfp is already in use if there is something
+	    # responding on phy address 0x06.
+	    res=$(ethctl phy int 0x06 0x0 2>&1 | awk '{print $5}')
+
+	    if [ "0xffff" = "$res" ]
+	    then
+		# no response. Force a check to see if the sfp has link
+		echo 1 >/sys/module/bcm_enet/parameters/force_crossbar_switch
+	    fi
 	fi
 }

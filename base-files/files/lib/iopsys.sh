@@ -180,42 +180,6 @@ build_minimal_rootfs() {
 	cd -
 }
 
-
-iopsys_nvram_handling(){
-	
-	[ -e /NVCPY ] || return
-        
-	echo "Nvram copy handling"
-	mount proc /proc -t proc
-	local iVersion=$(cat /proc/nvram/iVersion)
-	local bname=$(cat /proc/nvram/BoardId)
-	
-
-
-        if [ $iVersion -eq 4 -o $bname != "EG400R0" ];then
-	umount /proc
-	rm -rf /NVCPY	
-	return
- 	fi
-
-	mount sysfs /sys -t sysfs
-	mount tmpfs /tmp -t tmpfs -o size=100M,mode=0755
-
-	mknod -m 644 dev/kmsg     c   1 11
-	mknod -m 644 dev/mtd0     c  90  0
-	mknod -m 644 dev/mtd1     c  90  2
-	mknod -m 644 dev/mtd2     c  90  4
-	mknod -m 644 dev/mtd3     c  90  6
-	mknod -m 644 dev/mtd4     c  90  8
-	mknod -m 644 dev/mtd5     c  90 10
-	mknod -m 644 dev/mtd6     c  90 12
-	mknod -m 777 dev/null     c  1   3
-	. /lib/nvram_fixup.sh
-	nvram_upgrade2
-	rm -rf /NVCPY	
-	/bin/busybox reboot -f
-
-}
 # iopsys_upgrade_handling
 # This function needs to handle the following cases:
 # - normal boot, no upgrade

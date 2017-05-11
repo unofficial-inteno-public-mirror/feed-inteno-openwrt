@@ -5,7 +5,6 @@
 if [ -z "$PREINIT" ]
 then
 	. /lib/iopsys.sh
-	iopsys_nvram_handling
 	iopsys_upgrade_handling
 fi
 

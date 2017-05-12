@@ -2287,6 +2287,9 @@ config BUSYBOX_DEFAULT_FEATURE_UDHCP_RFC3397
 config BUSYBOX_DEFAULT_FEATURE_UDHCP_8021Q
 	bool
 	default n
+config BUSYBOX_DEFAULT_FEATURE_DHCP4o6C
+	bool
+	default n
 config BUSYBOX_DEFAULT_UDHCPC_DEFAULT_SCRIPT
 	string
 	default "/usr/share/udhcpc/default.script"

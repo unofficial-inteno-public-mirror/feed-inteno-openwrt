@@ -138,6 +138,15 @@ config BUSYBOX_CONFIG_FEATURE_UDHCP_8021Q
 	  If selected, both client and server will support passing of VLAN
 	  ID and priority via options 132 and 133 as per 802.1Q.
 
+config BUSYBOX_CONFIG_FEATURE_DHCP4o6C
+	bool "Use DHCPv4 over DHCPv6 (client only)"
+	default BUSYBOX_DEFAULT_FEATURE_DHCP4o6C
+	depends on BUSYBOX_CONFIG_UDHCPC
+	help
+	  If selected, DHCPv4 over DHCPv6 will be compiled in udhcpc.
+	  However, to activate this mechanism flag -6 must be used when
+	  starting udhcpc.
+
 config BUSYBOX_CONFIG_UDHCPC_DEFAULT_SCRIPT
 	string "Absolute path to config script"
 	default BUSYBOX_DEFAULT_UDHCPC_DEFAULT_SCRIPT

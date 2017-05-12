@@ -1,0 +1,134 @@
+--- a/bridge.c
++++ b/bridge.c
+@@ -119,28 +119,48 @@ static void
+ bridge_reset_primary(struct bridge_state *bst)
+ {
+ 	struct bridge_member *bm;
++	struct bridge_member *primary = NULL;
++	struct device *dev = NULL, *pdev = NULL;
++	uint8_t *macaddr;
+ 
+ 	if (!bst->primary_port &&
+ 	    (bst->dev.settings.flags & DEV_OPT_MACADDR))
+ 		return;
+ 
+-	bst->primary_port = NULL;
+ 	bst->dev.settings.flags &= ~DEV_OPT_MACADDR;
+-	vlist_for_each_element(&bst->members, bm, node) {
+-		uint8_t *macaddr;
+ 
++	vlist_for_each_element(&bst->members, bm, node) {
+ 		if (!bm->present)
+ 			continue;
++		dev = bm->dev.dev;
+ 
+-		bst->primary_port = bm;
+-		if (bm->dev.dev->settings.flags & DEV_OPT_MACADDR)
+-			macaddr = bm->dev.dev->settings.macaddr;
+-		else
+-			macaddr = bm->dev.dev->orig_settings.macaddr;
+-		memcpy(bst->dev.settings.macaddr, macaddr, 6);
+-		bst->dev.settings.flags |= DEV_OPT_MACADDR;
+-		return;
++		if (!primary || system_if_is_apcli(dev)) {
++			primary = bm;
++			pdev = dev;
++		}
+ 	}
++
++	if (!primary || !pdev)
++		return;
++
++	if (pdev->settings.flags & DEV_OPT_MACADDR)
++		macaddr = pdev->settings.macaddr;
++	else
++		macaddr = pdev->orig_settings.macaddr;
++
++	for (int i = 0; i < 6; i++)
++		if (bst->dev.settings.macaddr[i] != macaddr[i]) {
++			/* macaddr has changed */
++			bst->primary_port = primary;
++			memcpy(bst->dev.settings.macaddr, macaddr, 6);
++			bst->dev.settings.flags |= DEV_OPT_MACADDR;
++
++			system_if_apply_settings(&bst->dev, &bst->dev.settings, DEV_OPT_MACADDR);
++
++			netifd_log_message(L_NOTICE, "%s MAC address set to %s (based on bridge member %s)",
++					bst->dev.ifname, format_macaddr(bst->dev.settings.macaddr), bst->primary_port->name);
++			return;
++		}
+ }
+ 
+ static int
+@@ -215,6 +235,7 @@ bridge_enable_member(struct bridge_member *bm)
+ 	}
+ 
+ 	device_set_present(&bst->dev, true);
++	bridge_reset_primary(bst);
+ 	device_broadcast_event(&bst->dev, DEV_EVENT_TOPO_CHANGE);
+ 
+ 	return 0;
+@@ -368,7 +389,6 @@ bridge_set_up(struct bridge_state *bst)
+ 		return -ENOENT;
+ 	}
+ 
+-	bridge_reset_primary(bst);
+ 	ret = bst->set_state(&bst->dev, true);
+ 	if (ret < 0)
+ 		bridge_set_down(bst);
+@@ -411,6 +431,8 @@ bridge_create_member(struct bridge_state *bst, struct device *dev, bool hotplug)
+ 	if (hotplug && bm)
+ 		bm->node.version = -1;
+ 
++	bridge_reset_primary(bst);
++
+ 	return bm;
+ }
+ 
+diff --git a/system-linux.c b/system-linux.c
+index d868c15..86a934f 100644
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -1518,6 +1518,30 @@ system_if_get_parent(struct device *dev)
+ 	return device_get(devname, true);
+ }
+ 
++/* Function system_if_is_apcli
++ *
++ * Check if dev is an apcli
++ * Param dev pointer to the struct device to be checked
++ *
++ * Returns true if dev is apcli
++ */
++int system_if_is_apcli(struct device *dev)
++{
++	char *name;
++
++	if (!dev)
++		return false;
++
++	name = dev->ifname;
++
++	/* can be apcli0 or apclii0 */
++	if (strstr(name, "apcli")) {
++		return true;
++	}
++
++	return false;
++}
++
+ static bool
+ read_string_file(int dir_fd, const char *file, char *buf, int len)
+ {
+diff --git a/system.h b/system.h
+index d5cb4e3..b387811 100644
+--- a/system.h
++++ b/system.h
+@@ -137,6 +137,7 @@ struct device *system_if_get_parent(struct device *dev);
+ bool system_if_force_external(const char *ifname);
+ void system_if_apply_settings(struct device *dev, struct device_settings *s,
+ 			      unsigned int apply_mask);
++int system_if_is_apcli(struct device *dev);
+ 
+ int system_add_address(struct device *dev, struct device_addr *addr);
+ int system_del_address(struct device *dev, struct device_addr *addr);

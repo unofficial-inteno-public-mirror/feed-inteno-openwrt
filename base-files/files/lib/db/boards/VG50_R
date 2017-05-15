@@ -228,6 +228,8 @@ config led_map led_internet
 	list led_action_alert  'Internet_red   = FLASH_SLOW'
 	list led_action_error  'Internet_green = OFF'
 	list led_action_error  'Internet_red   = FLASH_FAST'
+	list led_action_eok	'internet_green = ON'
+	list led_action_eok	'internet_red   = ON'
 
 config led_map led_wan_phy_link
 	list led_action_off    'WAN_green = OFF'

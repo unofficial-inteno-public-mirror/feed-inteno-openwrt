@@ -329,6 +329,8 @@ config led_map led_internet
        list led_action_alert	'Internet_red   = FLASH_SLOW'
        list led_action_error	'Internet_green = OFF'
        list led_action_error	'Internet_red   = ON'
+	list led_action_eok	'internet_green = ON'
+	list led_action_eok	'internet_red   = ON'
 
 # On DG200, there is no DECT, the DECT LED is used for EXT indication
 # and the EXT LED is normally not used (no symbol on panel).

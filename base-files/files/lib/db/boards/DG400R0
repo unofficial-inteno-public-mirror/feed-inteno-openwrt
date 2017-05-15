@@ -395,6 +395,8 @@ list led_action_alert	'internet_green = OFF'
 list led_action_alert	'internet_red   = FLASH_SLOW'
 list led_action_error	'internet_green = OFF'
 list led_action_error	'internet_red   = ON'
+list led_action_eok	'internet_green = ON'
+list led_action_eok	'internet_red   = ON'
 
 config led_map led_voice1
 list led_action_ok	voice_red=OFF

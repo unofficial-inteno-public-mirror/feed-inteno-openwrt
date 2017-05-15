@@ -197,6 +197,8 @@ config led_map led_internet
 	list led_action_notice 'Internet_green = FLASH_SLOW'
 	list led_action_alert  'Internet_green = FLASH_SLOW'
 	list led_action_error  'Internet_green = FLASH_FAST'
+	list led_action_eok	'internet_green = ON'
+	list led_action_eok	'internet_red   = ON'
 
 config led_map led_voice1
 	list led_action_ok     'Voice_green = ON'

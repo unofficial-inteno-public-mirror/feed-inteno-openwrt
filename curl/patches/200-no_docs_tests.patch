@@ -1,0 +1,11 @@
+--- a/Makefile.am	2017-04-18 06:55:58.000000000 +0100
++++ b/Makefile.am	2017-05-16 12:30:06.612525169 +0100
+@@ -155,7 +155,7 @@
+ bin_SCRIPTS = curl-config
+ 
+ SUBDIRS = lib docs src include
+-DIST_SUBDIRS = $(SUBDIRS) tests packages scripts
++DIST_SUBDIRS = $(SUBDIRS) packages
+ 
+ pkgconfigdir = $(libdir)/pkgconfig
+ pkgconfig_DATA = libcurl.pc

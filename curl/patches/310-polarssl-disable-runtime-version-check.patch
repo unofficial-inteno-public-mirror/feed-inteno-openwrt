@@ -1,0 +1,23 @@
+--- a/lib/vtls/mbedtls.c	2017-04-18 07:36:20.000000000 +0100
++++ b/lib/vtls/mbedtls.c	2017-05-16 12:18:33.272492093 +0100
+@@ -791,7 +791,7 @@
+ 
+ size_t Curl_mbedtls_version(char *buffer, size_t size)
+ {
+-  unsigned int version = mbedtls_version_get_number();
++  unsigned int version = MBEDTLS_VERSION_NUMBER;
+   return snprintf(buffer, size, "mbedTLS/%d.%d.%d", version>>24,
+                   (version>>16)&0xff, (version>>8)&0xff);
+ }
+diff -Naur a/lib/vtls/polarssl.c b/lib/vtls/polarssl.c
+--- a/lib/vtls/polarssl.c	2017-04-18 07:36:20.000000000 +0100
++++ b/lib/vtls/polarssl.c	2017-05-16 12:20:22.920497324 +0100
+@@ -705,7 +705,7 @@
+ 
+ size_t Curl_polarssl_version(char *buffer, size_t size)
+ {
+-  unsigned int version = version_get_number();
++  unsigned int version = POLARSSL_VERSION_NUMBER;
+   return snprintf(buffer, size, "%s/%d.%d.%d",
+                   version >= 0x01030A00?"mbedTLS":"PolarSSL",
+                   version>>24, (version>>16)&0xff, (version>>8)&0xff);

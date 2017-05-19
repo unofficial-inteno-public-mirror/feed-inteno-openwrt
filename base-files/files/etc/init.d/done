@@ -17,4 +17,9 @@ boot() {
 
 	# start testnet
 	/sbin/testnet &
+
+	# trigger a fake hotplug net event
+	# to simulte the plug in/out of wan cable
+	# that might have happened while the router was powered off
+	/sbin/netmode-repeater-correction
 }

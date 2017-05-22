@@ -1,9 +1,21 @@
 #!/bin/sh
 
+set -x
+source /lib/functions/save_config.sh
+
 ubus call leds set '{ "state": "test"}'
 printf "\n\n*** Restore to default settings ***\n\n" > /dev/console
 rm -rf /rom/overlay/*
 rm -rf /rom/etc/adsl/adsl_phy.bin
 export REBOOT_REASON=defaultreset
 echo 1 >/tmp/defaultreset
+
+if [ "$1" == "--save" -o "$1" == "--soft" -o "$1" == "-s" ]; then
+	echo "$0: --save" >/dev/console
+	shift
+	save_config_before_overlay_rebuild $@
+	exit
+fi
+
 reboot
+set +x

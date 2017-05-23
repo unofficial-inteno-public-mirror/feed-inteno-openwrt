@@ -111,7 +111,7 @@ apply_wifi()
 
 	echo "The generated file / uci script:" >/dev/console
 	cat $SAVECFG_WIFI >/dev/console
-	### cat $SAVECFG_WIFI | uci batch >/dev/null 2>&1
+	cat $SAVECFG_WIFI | uci batch >/dev/null 2>&1
 }
 
 apply_fw_redirect()
@@ -135,7 +135,7 @@ apply_fw_redirect()
 
 	echo "The generated file / uci script:" >/dev/console
 	cat $SAVECFG_FW_REDIRECT >/dev/console
-	### cat $SAVECFG_FW_REDIRECT | uci batch >/dev/null 2>&1
+	cat $SAVECFG_FW_REDIRECT | uci batch >/dev/null 2>&1
 }
 
 apply_fw_parental()
@@ -159,7 +159,7 @@ apply_fw_parental()
 
 	echo "The generated file / uci script:" >/dev/console
 	cat $SAVECFG_FW_PARENTAL >/dev/console
-	### cat $SAVECFG_FW_PARENTAL | uci batch >/dev/null 2>&1
+	cat $SAVECFG_FW_PARENTAL | uci batch >/dev/null 2>&1
 }
 
 

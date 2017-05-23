@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if [ -x /bin/sysrepoctl ]; then
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-interfaces.yang --module=ietf-interfaces
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-x509-cert-to-name.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-system-keychain.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-tls-server.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-ssh-server.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-interfaces.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-ip.yang
+
+fi
+
+exit 0

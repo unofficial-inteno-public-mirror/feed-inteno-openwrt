@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ -x /bin/sysrepoctl ]; then
+	sysrepoctl --install --yang=/etc/sysrepo/yang/status.yang
+fi
+
+exit 0

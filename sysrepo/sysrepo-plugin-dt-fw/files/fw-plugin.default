@@ -1,0 +1,12 @@
+#!/bin/sh
+
+if [ -x /bin/sysrepoctl ]; then
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-keystore.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-ssh-server.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-x509-cert-to-name.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/iana-crypt-hash.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/ietf-system.yang
+	sysrepoctl --install --yang=/etc/sysrepo/yang/opencpe-firmware-mgmt.yang
+fi
+
+exit 0

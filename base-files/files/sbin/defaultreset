@@ -1,7 +1,7 @@
 #!/bin/sh
 
 set -x
-source /lib/functions/save_config.sh
+source /lib/functions/savecfg.sh
 
 ubus call leds set '{ "state": "test"}'
 printf "\n\n*** Restore to default settings ***\n\n" > /dev/console

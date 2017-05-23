@@ -425,6 +425,88 @@ cfe_image_upgrade() {
 	   of=$from seek=$(( $ofs + $skip )) conv=notrunc
 	imagewrite -c -k $ofs -l $size /dev/mtd$mtd_no $from
 }
+move_kernel(){
+	 v "move kernel in two blocks"
+	# we suppose that we have two kernels no exception, and kernel size is less than 39 blks
+	local kernel0=$(find_mtd_no "kernel_0")
+	local kernel1=$(find_mtd_no "kernel_1")
+	#move kernel 0
+	v "move kernel 0"
+	dd if=/dev/mtd$kernel0 of=/tmp/tmp_kernel
+	imagewrite -b 2 /dev/mtd$kernel0
+	imagewrite  -s 2 -l 4980736 /dev/mtd$kernel0 /tmp/tmp_kernel
+	rm -rf /tmp/tmp_kernel
+	#move kernel 1
+	v "move kernel 1"
+	dd if=/dev/mtd$kernel1 of=/tmp/tmp_kernel
+	imagewrite -b 1 /dev/mtd$kernel1
+	imagewrite  -s 1 -l 5111808 /dev/mtd$kernel1 /tmp/tmp_kernel
+}
+
+check_y3_support(){
+	cat proc/mtd | grep -q "cfe_extend" && echo "1" || echo "0"
+}
+
+check_y2_layout(){
+
+   if cat /proc/cmdline | grep -q "ubi:rootfs_" ;then
+	echo "1"
+   else
+        echo "0"
+   fi
+
+}
+
+cfe_write_extend()
+{
+	local extra_ofs=$1
+	local len=$2
+	local from=$3
+	local kernel0=$(find_mtd_no "kernel_0")
+	local kernel1=$(find_mtd_no "kernel_1")
+	#move kernel 0
+
+	dd if=/dev/mtd$kernel0 of=/tmp/tmp_kernel
+	imagewrite -s 0 -k $extra_ofs -l $len /dev/mtd$kernel0 $from
+	imagewrite  -s 2 -l 4980736 /dev/mtd$kernel0 /tmp/tmp_kernel
+	rm -rf /tmp/tmp_kernel
+	#move kernel 1
+
+	dd if=/dev/mtd$kernel1 of=/tmp/tmp_kernel
+	imagewrite -b 1 /dev/mtd$kernel1
+	imagewrite  -s 1 -l 5111808 /dev/mtd$kernel1 /tmp/tmp_kernel
+}
+
+cfe_image_new_upgrade(){
+	local from=$1
+	local ofs=$2
+	local size=$3
+	local mtd_no=$(find_mtd_no "nvram")
+	local mtd_extend=$(find_mtd_no "cfe_extend")
+	local skip=$(get_bootblock_nvram_offset)
+	local extend_ofs=$((1*128*1024+1024))
+	local extend_len=$((2*128*1024))
+	local is_y2=$(check_y2_layout)
+	local is_y3=$(check_y3_support)
+
+	dd if=/dev/mtd$mtd_no bs=1 count=1k skip=$skip \
+	   of=$from seek=$(( $ofs + $skip )) conv=notrunc
+
+        if [ $is_y2 -eq 0 -a $is_y3 -eq 0 ]; then
+           v "not support Upgrade "
+	   return
+	fi
+	imagewrite -c -k $ofs -l 131072 /dev/mtd$mtd_no $from  || return
+	#if it is already  the y3 layout, so do upgrade directly. otherwise move the kernel
+	if [ $is_y2 -eq 1 -a $is_y3 -eq 0 ]; then
+	   v "we need to move kernel"
+	   cfe_write_extend $extend_ofs $extend_len $from
+	else
+	   imagewrite -c -k $extend_ofs -l $extend_len /dev/mtd$mtd_extend $from
+	fi
+}
+
+
 
 make_nvram2_image() {
 	local img=$1
@@ -544,13 +626,35 @@ create_springboard_preinit() {
 	chmod +x $dest
 }
 
+erase_two_blks(){
+	local cfe_ver=$1
+	local is_y3=$2
+	local mtd_num
+	if [ $cfe_ver -nq 4 -a $is_y3 -eq 1 ];then
+		v "System upg from y3 to y2"
+		mtd_num=$(find_mtd_no "cfe_extend")
+		imagewrite -c  /dev/mtd$mtd_num
+	fi
+}
 inteno_image_upgrade() {
 	local from=$1
 	local cfe_ofs cfe_sz nvram_ofs nvram_sz k_ofs k_sz
 	local ubi_ofs ubi_sz ubifs_ofs ubifs_sz
 	local cur_vol upd_vol mtd_no seqn
-
+	local cfe_ver
+	local new_layout
+	local start_blk
+	local is_y3
+	local old_to_new
+	local is_y2
 	v "Parsing image header..."
+	cfe_ver=$(get_inteno_tag_val $from version)
+	[ $cfe_ver -eq 4 ] && v "- CFE: Y3 image"
+
+	new_layout=$(new_fs_support $cfe_ver)
+	is_y3=$(check_y3_support)
+	is_y2=$(check_y2_layout)
+
 
 	cfe_ofs=1024
 	cfe_sz="$(get_inteno_tag_val $from cfe)"
@@ -573,13 +677,22 @@ inteno_image_upgrade() {
 		echo "Image file too small, upgrade aborted!" >&2
 		return
 	fi
-
+	if [ $cfe_ver -eq 4 -a $is_y3 -eq 0 -a $is_y2 -eq 1 ];then
+		v "upgrade from y2 to y3"
+		old_to_new=1
+	fi
+	#upgrade from y2 to y3
 	if [ $cfe_sz -gt 0 -a $k_sz -eq 0 -a $ubifs_sz -eq 0 -a $ubi_sz -eq 0 ]; then
 
 		# CFE only upgrade
 
 		v "Writing CFE image to nvram (boot block) partition ..."
-		cfe_image_upgrade $from $cfe_ofs $cfe_sz
+		if [ $cfe_ver -eq 4  ]; then
+			cfe_image_new_upgrade $from $cfe_ofs $cfe_sz
+		else
+			erase_two_blks $cfe_ver $is_y3
+			cfe_image_upgrade $from $cfe_ofs $cfe_sz
+		fi
 
 	elif [ $k_sz -gt 0 -a $ubifs_sz -gt 0 -o $k_sz -gt 0 -a $ubi_sz -gt 0 ]; then
 
@@ -587,7 +700,14 @@ inteno_image_upgrade() {
 
 		if [ $cfe_sz -gt 0 ]; then
 			v "Writing CFE image to nvram (boot block) partition ..."
-			cfe_image_upgrade $from $cfe_ofs $cfe_sz
+
+			if [ $cfe_ver -eq 4  ]; then
+				v "cfe new upg"
+				cfe_image_new_upgrade $from $cfe_ofs $cfe_sz
+			else
+				erase_two_blks $cfe_ver $is_y3
+				cfe_image_upgrade $from $cfe_ofs $cfe_sz
+			fi
 		fi
 
 		if cat /proc/cmdline |grep -q "ubi:rootfs_"; then
@@ -597,14 +717,20 @@ inteno_image_upgrade() {
 			if cat /proc/cmdline |grep -q "ubi:rootfs_0"; then
 				cur_vol=0
 				upd_vol=1
+				start_blk=1
 			else
 				cur_vol=1
 				upd_vol=0
+				start_blk=2
 			fi
 
 			v "Killing old kernel..."
 			mtd_no=$(find_mtd_no "kernel_$upd_vol")
-			imagewrite -b 8 /dev/mtd$mtd_no || return 1
+
+			if [ $old_to_new -ne 1 ];then
+				v "old version erase"
+				imagewrite -b 8 /dev/mtd$mtd_no || return 1
+			fi
 
 			umount -f /dev/ubi0_$upd_vol
 			if [ $ubi_sz -gt 0 ]; then
@@ -623,13 +749,22 @@ inteno_image_upgrade() {
 				    --size=$ubifs_sz --skip=$ubifs_ofs $from \
 				    || return 1
 			fi
-
+			#if old cfe is y2, we need to move the kernel to y3 layout
 			v "Writing kernel image to kernel_$upd_vol partition ..."
 			mtd_no=$(find_mtd_no "kernel_$cur_vol")
+			v "mtd:$mtd_no"
 			seqn=$(get_image_sequence_number /dev/mtd$mtd_no 0)
+			v "sq:$seqn"
 			update_sequence_number $from $seqn $k_ofs $k_sz
 			mtd_no=$(find_mtd_no "kernel_$upd_vol")
-			imagewrite -c -k $k_ofs -l $k_sz /dev/mtd$mtd_no $from
+			v "is y3 $is_y3 sq:$seqn ch:$old_to_new"
+
+			if [  $old_to_new -eq 1 ];then
+			   v "change y2 to y3 image with new cfe"
+			   imagewrite -c -k $k_ofs -l $k_sz -s $start_blk /dev/mtd$mtd_no $from
+			else
+			  imagewrite -c -k $k_ofs -l $k_sz /dev/mtd$mtd_no $from
+			fi
 
 		else
 
